@@ -18583,15 +18583,11 @@
   },
   "servers": [
     {
-      "url": "https://common-api.karma.life",
+      "url": "https://common-api.karmalicious.com",
       "description": "Production"
     },
     {
-      "url": "https://common-api.beta.karma.life",
-      "description": "Beta"
-    },
-    {
-      "url": "https://common-api.development.karma.life",
+      "url": "https://common-api-dev.karmalicious.com",
       "description": "Development"
     }
   ],

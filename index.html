@@ -20,26 +20,44 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 40px;
+      height: 48px;
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 0 20px;
       z-index: 1000;
       border-bottom: 1px solid #0f3460;
     }
     .version-bar .logo {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       color: #fff;
       font-weight: 600;
-      font-size: 14px;
+      font-size: 15px;
     }
     .version-bar .logo svg {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .nav-links a {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover {
+      color: #e94560;
+    }
+    .nav-links a.active {
+      color: #fff;
     }
     .version-selector {
       display: flex;
@@ -70,13 +88,13 @@
       box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.2);
     }
     .api-reference-container {
-      padding-top: 40px;
+      padding-top: 48px;
     }
     .loading {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: calc(100vh - 40px);
+      height: calc(100vh - 48px);
       color: #666;
     }
     .loading::after {
@@ -92,6 +110,72 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* Examples page styles */
+    .examples-page {
+      padding-top: 48px;
+      max-width: 900px;
+      margin: 0 auto;
+      padding-left: 24px;
+      padding-right: 24px;
+      padding-bottom: 60px;
+    }
+    .examples-page h1 {
+      font-size: 32px;
+      margin-top: 40px;
+      margin-bottom: 16px;
+      color: #1a1a2e;
+    }
+    .examples-page .intro {
+      font-size: 18px;
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+    .example-cards {
+      display: grid;
+      gap: 24px;
+    }
+    .example-card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .example-card:hover {
+      border-color: #e94560;
+      box-shadow: 0 4px 12px rgba(233, 69, 96, 0.1);
+      transform: translateY(-2px);
+    }
+    .example-card h2 {
+      font-size: 20px;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+    }
+    .example-card p {
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .example-card .tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .example-card .tag {
+      background: #f0f0f0;
+      color: #555;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -104,6 +188,11 @@
       </svg>
       Karma Common API
     </div>
+    <div class="nav-links">
+      <a href="?" id="nav-docs" class="active">API Reference</a>
+      <a href="?page=examples" id="nav-examples">Examples</a>
+      <a href="https://github.com/karmadev/karma-common-api-docs" target="_blank">GitHub</a>
+    </div>
     <div class="version-selector">
       <label for="version">Version:</label>
       <select id="version" onchange="switchVersion(this.value)">
@@ -112,13 +201,68 @@
     </div>
   </div>
 
-  <div class="api-reference-container">
+  <div class="api-reference-container" id="api-container">
     <div id="loading" class="loading">Loading API documentation</div>
+  </div>
+
+  <div class="examples-page hidden" id="examples-container">
+    <h1>Implementation Examples</h1>
+    <p class="intro">
+      Learn how to integrate with the Karma Common API through these practical examples.
+      Each guide includes full code samples in TypeScript and cURL commands.
+    </p>
+
+    <div class="example-cards">
+      <a href="examples/nightly-sales-data.md" class="example-card" onclick="viewMarkdown(event, 'examples/nightly-sales-data.md')">
+        <h2>Fetching Nightly Sales Data</h2>
+        <p>
+          Build an automated nightly sales report that fetches purchase data, handles pagination,
+          and aggregates sales by hour and product. Perfect for accounting integrations.
+        </p>
+        <div class="tags">
+          <span class="tag">Purchases API</span>
+          <span class="tag">Pagination</span>
+          <span class="tag">Reporting</span>
+        </div>
+      </a>
+
+      <a href="examples/inventory-sync.md" class="example-card" onclick="viewMarkdown(event, 'examples/inventory-sync.md')">
+        <h2>Pushing and Pulling Inventory</h2>
+        <p>
+          Sync inventory between your system and Karma. Learn how to fetch items,
+          update prices and availability, and handle variants. Includes two-way sync example.
+        </p>
+        <div class="tags">
+          <span class="tag">Inventory API</span>
+          <span class="tag">Variant Groups</span>
+          <span class="tag">POS Integration</span>
+        </div>
+      </a>
+
+      <a href="examples/realtime-webhooks.md" class="example-card" onclick="viewMarkdown(event, 'examples/realtime-webhooks.md')">
+        <h2>Real-time Sales via Webhooks</h2>
+        <p>
+          Receive instant notifications when orders are placed and payments complete.
+          Includes signature verification, event handling, and integration patterns.
+        </p>
+        <div class="tags">
+          <span class="tag">Webhooks</span>
+          <span class="tag">Real-time</span>
+          <span class="tag">Event Handling</span>
+        </div>
+      </a>
+    </div>
   </div>
 
   <script>
     // Configuration
     const BASE_URL = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+
+    // Get page from URL
+    function getCurrentPage() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('page') || 'docs';
+    }
 
     // Get version from URL or default to latest
     function getCurrentVersion() {
@@ -135,6 +279,12 @@
         url.searchParams.set('version', version);
       }
       window.location.href = url.toString();
+    }
+
+    // View markdown file (opens in new tab for now)
+    function viewMarkdown(event, path) {
+      // For GitHub Pages, markdown files open as raw
+      // In the future, we could render them inline
     }
 
     // Load version manifest and populate dropdown
@@ -217,9 +367,31 @@
       document.body.appendChild(scalarScript);
     }
 
+    // Route to correct page
+    function initPage() {
+      const page = getCurrentPage();
+      const apiContainer = document.getElementById('api-container');
+      const examplesContainer = document.getElementById('examples-container');
+      const navDocs = document.getElementById('nav-docs');
+      const navExamples = document.getElementById('nav-examples');
+
+      if (page === 'examples') {
+        apiContainer.classList.add('hidden');
+        examplesContainer.classList.remove('hidden');
+        navDocs.classList.remove('active');
+        navExamples.classList.add('active');
+      } else {
+        examplesContainer.classList.add('hidden');
+        apiContainer.classList.remove('hidden');
+        navDocs.classList.add('active');
+        navExamples.classList.remove('active');
+        initScalar();
+      }
+    }
+
     // Initialize
     loadVersions();
-    initScalar();
+    initPage();
   </script>
 </body>
 </html>
