@@ -1,20 +1,40 @@
 # Karma Common API Documentation
 
-This repository hosts the OpenAPI specification for the [Karma Common API](https://github.com/karmadev/karma-common-api).
+This repository hosts the OpenAPI specification and documentation for the [Karma Common API](https://github.com/karmadev/karma-common-api).
 
 ## Live Documentation
 
-**[View API Docs](https://docs.karma.life/)**
+**[https://docs.karma.life](https://docs.karma.life)**
 
-## Available Versions
+## Features
 
-| Path | Description |
-|------|-------------|
-| `/latest/openapi.json` | Always the latest version |
-| `/versions/v1/openapi.json` | Latest v1.x.x (stable) |
-| `/versions/v1.2.0/openapi.json` | Specific version (immutable) |
+- **Interactive API Reference** - Full OpenAPI documentation powered by Scalar
+- **Environment Selector** - Switch between Production, Beta, and Development APIs
+- **Implementation Examples** - Complete code examples for common integrations
+- **Version History** - Access previous API versions
+
+## Implementation Examples
+
+| Example | Description |
+|---------|-------------|
+| [Nightly Sales Data](examples/nightly-sales-data.md) | Fetch and aggregate daily sales for accounting |
+| [Inventory Sync](examples/inventory-sync.md) | Two-way inventory sync with POS systems |
+| [Real-time Webhooks](examples/realtime-webhooks.md) | Receive instant sales notifications |
+
+## API Environments
+
+| Environment | API Base URL |
+|-------------|--------------|
+| Production | `https://common-api.karma.life` |
+| Beta | `https://common-api.beta.karma.life` |
+| Development | `https://common-api.development.karma.life` |
 
 ## Using the Specification
+
+### Direct Links
+
+- **JSON**: https://docs.karma.life/latest/openapi.json
+- **YAML**: https://docs.karma.life/latest/openapi.yaml
 
 ### Embed with Scalar
 
@@ -41,23 +61,27 @@ This repository hosts the OpenAPI specification for the [Karma Common API](https
 3. Paste: `https://docs.karma.life/latest/openapi.json`
 4. Click **Import**
 
-### Download Directly
-
-- **JSON**: https://docs.karma.life/latest/openapi.json
-- **YAML**: https://docs.karma.life/latest/openapi.yaml
-
-### Use in Code Generation
+### Generate TypeScript Client
 
 ```bash
-# Generate TypeScript client with openapi-generator
+# Using openapi-generator
 npx @openapitools/openapi-generator-cli generate \
   -i https://docs.karma.life/latest/openapi.json \
   -g typescript-fetch \
   -o ./generated-client
 
-# Generate with orval (recommended for React)
+# Using orval (recommended for React)
 npx orval --input https://docs.karma.life/latest/openapi.json
 ```
+
+## Version History
+
+| Path | Description |
+|------|-------------|
+| `/latest/openapi.json` | Always the latest version |
+| `/versions/v1/openapi.json` | Latest v1.x stable |
+
+See [versions/manifest.json](./versions/manifest.json) for the complete version history.
 
 ## Automatic Updates
 
@@ -68,10 +92,6 @@ This documentation is automatically updated when changes are pushed to the [karm
 - Changes to `src/server.ts`
 - Version bumps in `package.json`
 
-## Version History
-
-See [versions/manifest.json](./versions/manifest.json) for the complete version history.
-
 ## Related Repositories
 
 - [karma-common-api](https://github.com/karmadev/karma-common-api) - The API source code
@@ -79,4 +99,4 @@ See [versions/manifest.json](./versions/manifest.json) for the complete version 
 
 ## Support
 
-For API support, contact [developers@karma.life](mailto:developers@karma.life)
+For API support, contact [hello@karma.life](mailto:hello@karma.life)
