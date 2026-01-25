@@ -4,7 +4,7 @@ This repository hosts the OpenAPI specification for the [Karma Common API](https
 
 ## Live Documentation
 
-**[View API Docs](https://karmadev.github.io/karma-common-api-docs/)**
+**[View API Docs](https://docs.karma.life/)**
 
 ## Available Versions
 
@@ -27,7 +27,7 @@ This repository hosts the OpenAPI specification for the [Karma Common API](https
 <body>
   <script
     id="api-reference"
-    data-url="https://karmadev.github.io/karma-common-api-docs/latest/openapi.json">
+    data-url="https://docs.karma.life/latest/openapi.json">
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>
@@ -38,25 +38,25 @@ This repository hosts the OpenAPI specification for the [Karma Common API](https
 
 1. Open Postman
 2. Click **Import** → **Link**
-3. Paste: `https://karmadev.github.io/karma-common-api-docs/latest/openapi.json`
+3. Paste: `https://docs.karma.life/latest/openapi.json`
 4. Click **Import**
 
 ### Download Directly
 
-- **JSON**: https://karmadev.github.io/karma-common-api-docs/latest/openapi.json
-- **YAML**: https://karmadev.github.io/karma-common-api-docs/latest/openapi.yaml
+- **JSON**: https://docs.karma.life/latest/openapi.json
+- **YAML**: https://docs.karma.life/latest/openapi.yaml
 
 ### Use in Code Generation
 
 ```bash
 # Generate TypeScript client with openapi-generator
 npx @openapitools/openapi-generator-cli generate \
-  -i https://karmadev.github.io/karma-common-api-docs/latest/openapi.json \
+  -i https://docs.karma.life/latest/openapi.json \
   -g typescript-fetch \
   -o ./generated-client
 
 # Generate with orval (recommended for React)
-npx orval --input https://karmadev.github.io/karma-common-api-docs/latest/openapi.json
+npx orval --input https://docs.karma.life/latest/openapi.json
 ```
 
 ## Automatic Updates
