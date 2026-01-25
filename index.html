@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karma Common API Documentation</title>
+  <meta name="description" content="API documentation for the Karma Common API - RESTful access to inventory, orders, tabs, locations, and more.">
+  <link rel="icon" href="https://karma.life/favicon.ico">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .version-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 1000;
+      border-bottom: 1px solid #0f3460;
+    }
+    .version-bar .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .version-bar .logo svg {
+      width: 20px;
+      height: 20px;
+    }
+    .version-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .version-selector label {
+      color: #a0a0a0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .version-selector select {
+      background: #0f3460;
+      color: #fff;
+      border: 1px solid #1a4a7a;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      outline: none;
+    }
+    .version-selector select:hover {
+      border-color: #e94560;
+    }
+    .version-selector select:focus {
+      border-color: #e94560;
+      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.2);
+    }
+    .api-reference-container {
+      padding-top: 40px;
+    }
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 40px);
+      color: #666;
+    }
+    .loading::after {
+      content: '';
+      width: 24px;
+      height: 24px;
+      border: 2px solid #e94560;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 12px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="version-bar">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+      Karma Common API
+    </div>
+    <div class="version-selector">
+      <label for="version">Version:</label>
+      <select id="version" onchange="switchVersion(this.value)">
+        <option value="latest">Latest</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="api-reference-container">
+    <div id="loading" class="loading">Loading API documentation</div>
+  </div>
+
+  <script>
+    // Configuration
+    const BASE_URL = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+
+    // Get version from URL or default to latest
+    function getCurrentVersion() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('version') || 'latest';
+    }
+
+    // Switch to a different version
+    function switchVersion(version) {
+      const url = new URL(window.location.href);
+      if (version === 'latest') {
+        url.searchParams.delete('version');
+      } else {
+        url.searchParams.set('version', version);
+      }
+      window.location.href = url.toString();
+    }
+
+    // Load version manifest and populate dropdown
+    async function loadVersions() {
+      try {
+        const response = await fetch(`${BASE_URL}/versions/manifest.json`);
+        if (!response.ok) throw new Error('Manifest not found');
+
+        const manifest = await response.json();
+        const select = document.getElementById('version');
+        const currentVersion = getCurrentVersion();
+
+        // Clear existing options except "Latest"
+        select.innerHTML = '<option value="latest">Latest (' + manifest.latest + ')</option>';
+
+        // Add version options
+        if (manifest.versions && manifest.versions.length > 0) {
+          const versions = [...manifest.versions].sort().reverse();
+          versions.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            if (v === currentVersion) opt.selected = true;
+            select.appendChild(opt);
+          });
+        }
+
+        // Select current version
+        if (currentVersion !== 'latest') {
+          select.value = currentVersion;
+        }
+      } catch (e) {
+        console.log('Version manifest not available yet');
+      }
+    }
+
+    // Get the spec URL for the current version
+    function getSpecUrl() {
+      const version = getCurrentVersion();
+      if (version === 'latest') {
+        return `${BASE_URL}/latest/openapi.json`;
+      }
+      return `${BASE_URL}/versions/${version}/openapi.json`;
+    }
+
+    // Initialize Scalar
+    async function initScalar() {
+      const specUrl = getSpecUrl();
+
+      // Remove loading indicator
+      const loading = document.getElementById('loading');
+      if (loading) loading.remove();
+
+      // Create and inject Scalar
+      const container = document.querySelector('.api-reference-container');
+
+      const script = document.createElement('script');
+      script.id = 'api-reference';
+      script.dataset.url = specUrl;
+      script.dataset.configuration = JSON.stringify({
+        theme: 'kepler',
+        layout: 'modern',
+        showSidebar: true,
+        hideModels: false,
+        hideDownloadButton: false,
+        hiddenClients: [],
+        defaultHttpClient: {
+          targetKey: 'javascript',
+          clientKey: 'fetch',
+        },
+        metaData: {
+          title: 'Karma Common API',
+          description: 'RESTful API for the Karma platform',
+        },
+      });
+      container.appendChild(script);
+
+      const scalarScript = document.createElement('script');
+      scalarScript.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
+      document.body.appendChild(scalarScript);
+    }
+
+    // Initialize
+    loadVersions();
+    initScalar();
+  </script>
+</body>
+</html>
