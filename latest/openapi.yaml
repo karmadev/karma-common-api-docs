@@ -13209,9 +13209,11 @@ paths:
                   timestamp: 2025-01-15T10:30:00.000Z
                   executionTimeMs: 10
 servers:
-  - url: https://common-api.karmalicious.com
+  - url: https://common-api.karma.life
     description: Production
-  - url: https://common-api-dev.karmalicious.com
+  - url: https://common-api.beta.karma.life
+    description: Beta
+  - url: https://common-api.development.karma.life
     description: Development
 security:
   - apiKey: []
