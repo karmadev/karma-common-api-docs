@@ -785,7 +785,26 @@ function zoomBy(d) {
   scale = ns; panX=cx-wx*scale; panY=cy-wy*scale; applyTransform();
 }
 
-function resetView() { scale=0.85; panX=0; panY=-20; applyTransform(); }
+function centerView() {
+  // Calculate bounding box of all entities
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  for (const [n] of Object.entries(entities)) {
+    const r = getEntityRect(n);
+    minX=Math.min(minX, r.x); minY=Math.min(minY, r.y);
+    maxX=Math.max(maxX, r.x+r.w); maxY=Math.max(maxY, r.y+r.h);
+  }
+  const worldW = maxX - minX, worldH = maxY - minY;
+  const centerX = minX + worldW/2, centerY = minY + worldH/2;
+  // Fit to viewport with some padding
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const fitScale = Math.min(vw / (worldW + 120), vh / (worldH + 120), 1);
+  scale = Math.max(0.3, Math.min(1.2, fitScale));
+  panX = vw/2 - centerX * scale;
+  panY = vh/2 - centerY * scale;
+  applyTransform();
+}
+
+function resetView() { centerView(); }
 
 function updateMinimap() {
   const mm = document.getElementById('minimap'), mmW=160, mmH=100;
@@ -809,7 +828,7 @@ function updateMinimap() {
 const ro = new ResizeObserver(() => requestAnimationFrame(() => drawRelationships()));
 buildEntities();
 for (const el of Object.values(entityElements)) ro.observe(el);
-requestAnimationFrame(() => { drawRelationships(); applyTransform(); });
+requestAnimationFrame(() => { drawRelationships(); centerView(); });
 window.addEventListener('resize', () => { drawRelationships(); updateMinimap(); });
 document.addEventListener('keydown', e => {
   if (e.key==='0') resetView();
