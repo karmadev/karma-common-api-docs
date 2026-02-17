@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory Data Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-deep: #0c0c1a;
+    --bg-card: #16162a;
+    --border-dim: rgba(139, 92, 246, 0.12);
+    --border-glow: rgba(139, 92, 246, 0.35);
+    --text-primary: #e8e6f0;
+    --text-secondary: #8b8a9e;
+    --text-muted: #5a596e;
+    --accent-purple: #8b5cf6;
+    --accent-violet: #a78bfa;
+    --field-required: #34d399;
+    --field-optional: #6b7280;
+    --field-financial: #fbbf24;
+    --field-relation: #a78bfa;
+    --field-kitchen: #f97316;
+    --field-integration: #06b6d4;
+    --field-inheritance: #ec4899;
+    --field-stock: #22d3ee;
+    --rel-line: rgba(139, 92, 246, 0.4);
+    --rel-line-hover: rgba(139, 92, 246, 0.8);
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: grab;
+    user-select: none;
+  }
+  body:active { cursor: grabbing; }
+
+  /* Toolbar */
+  .erd-toolbar {
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(22, 22, 42, 0.9);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-dim);
+    border-radius: 10px;
+    padding: 6px 10px;
+  }
+
+  .erd-toolbar button {
+    height: 28px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 0 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .erd-toolbar button:hover {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: var(--border-dim);
+    color: var(--accent-violet);
+  }
+  .erd-toolbar .sep {
+    width: 1px;
+    height: 20px;
+    background: var(--border-dim);
+    margin: 0 2px;
+  }
+  .zoom-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 36px;
+    text-align: center;
+  }
+
+  /* Canvas */
+  #canvas {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  /* SVG lines */
+  #svg-lines {
+    position: absolute;
+    top: 0; left: 0;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 1;
+    width: 1px; height: 1px;
+  }
+
+  .rel-line {
+    stroke: var(--rel-line);
+    stroke-width: 1.5;
+    fill: none;
+    transition: stroke 0.3s, stroke-width 0.3s;
+  }
+  .rel-line.highlighted { stroke: var(--rel-line-hover); stroke-width: 2.5; }
+  .rel-marker { fill: var(--rel-line); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .rel-marker.highlighted { fill: var(--rel-line-hover); }
+  .rel-label { fill: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+  .rel-label.highlighted { fill: var(--accent-violet); }
+
+  /* Entity cards */
+  .entity {
+    position: absolute;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 10px;
+    min-width: 230px;
+    max-width: 300px;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    z-index: 2;
+    cursor: default;
+  }
+  .entity:hover, .entity.highlighted {
+    border-color: var(--border-glow);
+    box-shadow: 0 0 24px rgba(139, 92, 246, 0.08), 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .entity.central {
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 32px rgba(139, 92, 246, 0.1);
+  }
+  .entity-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: grab;
+    border-bottom: 1px solid var(--border-dim);
+    background: linear-gradient(135deg, rgba(139,92,246,0.04), transparent);
+    transition: background 0.2s;
+  }
+  .entity-header:active { cursor: grabbing; }
+  .entity-header:hover { background: linear-gradient(135deg, rgba(139,92,246,0.08), transparent); }
+  .entity-name {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+  }
+  .central .entity-name {
+    background: linear-gradient(135deg, var(--accent-violet), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .entity-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: rgba(139,92,246,0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .entity-toggle {
+    color: var(--text-muted);
+    font-size: 11px;
+    transition: transform 0.3s, color 0.3s;
+    margin-left: 6px;
+  }
+  .entity.expanded .entity-toggle { transform: rotate(180deg); color: var(--accent-violet); }
+
+  .entity-fields {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .entity.expanded .entity-fields {
+    max-height: 340px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,92,246,0.3) transparent;
+  }
+  .entity.expanded .entity-fields::-webkit-scrollbar { width: 4px; }
+  .entity.expanded .entity-fields::-webkit-scrollbar-track { background: transparent; }
+  .entity.expanded .entity-fields::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 4px; }
+
+  .field-group { padding: 6px 0; border-bottom: 1px solid rgba(139,92,246,0.05); }
+  .field-group:last-child { border-bottom: none; }
+  .field-group-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 2px 14px 3px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .field-group-label .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .field-group-label.required { color: var(--field-required); }
+  .field-group-label.required .dot { background: var(--field-required); }
+  .field-group-label.optional { color: var(--field-optional); }
+  .field-group-label.optional .dot { background: var(--field-optional); }
+  .field-group-label.financial { color: var(--field-financial); }
+  .field-group-label.financial .dot { background: var(--field-financial); }
+  .field-group-label.relation { color: var(--field-relation); }
+  .field-group-label.relation .dot { background: var(--field-relation); }
+  .field-group-label.kitchen { color: var(--field-kitchen); }
+  .field-group-label.kitchen .dot { background: var(--field-kitchen); }
+  .field-group-label.integration { color: var(--field-integration); }
+  .field-group-label.integration .dot { background: var(--field-integration); }
+  .field-group-label.inheritance { color: var(--field-inheritance); }
+  .field-group-label.inheritance .dot { background: var(--field-inheritance); }
+  .field-group-label.stock { color: var(--field-stock); }
+  .field-group-label.stock .dot { background: var(--field-stock); }
+
+  .field-row {
+    display: flex; align-items: baseline;
+    padding: 1px 14px; font-size: 11px; gap: 5px; line-height: 1.6;
+  }
+  .field-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 500;
+    color: var(--text-primary); white-space: nowrap;
+  }
+  .field-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-muted); white-space: nowrap;
+  }
+  .field-pk {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; font-weight: 700;
+    color: var(--field-financial);
+    background: rgba(251,191,36,0.1);
+    padding: 0 3px; border-radius: 3px;
+  }
+  .field-fk {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; font-weight: 700;
+    color: var(--field-relation);
+    background: rgba(167,139,250,0.1);
+    padding: 0 3px; border-radius: 3px;
+  }
+
+  /* Legend */
+  .legend {
+    position: fixed;
+    bottom: 12px; left: 12px;
+    z-index: 100;
+    background: rgba(22, 22, 42, 0.9);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-dim);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 10px;
+  }
+  .legend h4 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600; font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+  .legend-items { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 16px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-secondary); }
+  .legend-section { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-dim); }
+  .legend-rel { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .legend-rel-symbol { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent-violet); min-width: 36px; }
+
+  /* Minimap */
+  .minimap {
+    position: fixed;
+    bottom: 12px; right: 12px;
+    z-index: 100;
+    width: 160px; height: 100px;
+    background: rgba(22, 22, 42, 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .minimap-viewport {
+    position: absolute;
+    border: 1px solid var(--accent-purple);
+    background: rgba(139, 92, 246, 0.06);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .minimap-entity { position: absolute; background: rgba(139, 92, 246, 0.3); border-radius: 2px; }
+  .minimap-entity.central { background: rgba(139, 92, 246, 0.6); }
+
+  /* Grid background */
+  .grid-bg {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(circle at 50% 50%, rgba(139,92,246,0.03) 0%, transparent 70%),
+      linear-gradient(rgba(139,92,246,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,92,246,0.015) 1px, transparent 1px);
+    background-size: 100% 100%, 40px 40px, 40px 40px;
+  }
+
+  /* Tooltip */
+  .rel-tooltip {
+    position: fixed; z-index: 200;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-primary);
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    max-width: 260px;
+  }
+  .rel-tooltip.visible { opacity: 1; }
+  .rel-tooltip-via { color: var(--text-muted); font-size: 9px; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div class="erd-toolbar">
+  <button onclick="toggleAll()" id="btnToggle">Expand All</button>
+  <div class="sep"></div>
+  <button onclick="zoomBy(-0.15)">-</button>
+  <span class="zoom-display" id="zoomLevel">85%</span>
+  <button onclick="zoomBy(0.15)">+</button>
+  <div class="sep"></div>
+  <button onclick="resetView()">Reset</button>
+</div>
+
+<div id="canvas">
+  <svg id="svg-lines" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div class="legend">
+  <h4>Field Groups</h4>
+  <div class="legend-items">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--field-required)"></div><span class="legend-label">Required</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--field-optional)"></div><span class="legend-label">Optional</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--field-financial)"></div><span class="legend-label">Financial</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--field-relation)"></div><span class="legend-label">Relationships</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--field-kitchen)"></div><span class="legend-label">Kitchen</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--field-integration)"></div><span class="legend-label">Integration</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--field-inheritance)"></div><span class="legend-label">Inheritance</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--field-stock)"></div><span class="legend-label">Stock</span></div>
+  </div>
+  <div class="legend-section">
+    <h4>Cardinality</h4>
+    <div class="legend-rel"><span class="legend-rel-symbol">1 ── 1</span><span class="legend-label">One to One</span></div>
+    <div class="legend-rel"><span class="legend-rel-symbol">1 ── *</span><span class="legend-label">One to Many</span></div>
+    <div class="legend-rel"><span class="legend-rel-symbol">* ── *</span><span class="legend-label">Many to Many</span></div>
+    <div class="legend-rel"><span class="legend-rel-symbol">0..1──</span><span class="legend-label">Optional</span></div>
+  </div>
+</div>
+
+<div class="minimap" id="minimap"></div>
+
+<div class="rel-tooltip" id="relTooltip">
+  <div id="relTooltipText"></div>
+  <div class="rel-tooltip-via" id="relTooltipVia"></div>
+</div>
+
+<script>
+const entities = {
+  InventoryItem: {
+    central: true, x: 800, y: 400,
+    fieldGroups: [
+      { label: 'Required', type: 'required', fields: [
+        { name: 'id', type: 'number', pk: true },
+        { name: 'locationId', type: 'number', fk: true },
+        { name: 'title', type: 'string' },
+        { name: 'deleted', type: 'boolean' },
+        { name: 'createdDate', type: 'string' },
+        { name: 'madeToOrder', type: 'boolean' },
+        { name: 'calculatedPrice', type: 'number (cents)' },
+        { name: 'isAvailable', type: 'boolean' },
+      ]},
+      { label: 'Optional', type: 'optional', fields: [
+        { name: 'description', type: 'string?' },
+        { name: 'ingredients', type: 'string?' },
+        { name: 'imageUrl', type: 'string?' },
+        { name: 'externalImageUrl', type: 'string?' },
+        { name: 'articleNumber', type: 'string?' },
+        { name: 'barcode', type: 'string?' },
+        { name: 'ean', type: 'string?' },
+        { name: 'itemType', type: 'string?' },
+        { name: 'vatValue', type: 'number?' },
+        { name: 'vatId', type: 'number?', fk: true },
+        { name: 'isAlcohol', type: 'boolean?' },
+        { name: 'autosaleAmount', type: 'number?' },
+        { name: 'context', type: 'json?' },
+        { name: 'images', type: 'json?' },
+      ]},
+      { label: 'Kitchen', type: 'kitchen', fields: [
+        { name: 'titlePrep', type: 'string?' },
+        { name: 'prepTimeMinutes', type: 'number?' },
+        { name: 'coursingOrder', type: 'number?' },
+        { name: 'servingCenterId', type: 'number?', fk: true },
+      ]},
+      { label: 'Financial', type: 'financial', fields: [
+        { name: 'purchaseCostCents', type: 'number? (cents)' },
+        { name: 'variablePricing', type: 'boolean?' },
+        { name: 'karmaCutPercentage', type: 'number?' },
+      ]},
+      { label: 'Stock', type: 'stock', fields: [
+        { name: 'ministock', type: 'number?' },
+      ]},
+      { label: 'Integration', type: 'integration', fields: [
+        { name: 'integrationId', type: 'number?' },
+        { name: 'integrationItemId', type: 'string?' },
+      ]},
+      { label: 'Relationships', type: 'relation', fields: [
+        { name: 'pricings', type: 'ItemPricing[]' },
+        { name: 'childItemIds', type: 'number[]' },
+        { name: 'childItems', type: 'ChildItem[]' },
+        { name: 'parentItemIds', type: 'number[]' },
+        { name: 'variantGroupIds', type: 'number[]' },
+        { name: 'printerGroupIds', type: 'string[]' },
+        { name: 'tags', type: 'GroupedTags' },
+        { name: 'tagIds', type: 'number[]' },
+        { name: 'visibility', type: 'string[]' },
+        { name: 'accountIds', type: 'string[]' },
+      ]},
+      { label: 'Inheritance', type: 'inheritance', fields: [
+        { name: 'isInherited', type: 'boolean?' },
+        { name: 'parentItemId', type: 'number?', fk: true },
+        { name: 'sourceLocationId', type: 'number?', fk: true },
+        { name: 'inheritToChildren', type: 'boolean?' },
+        { name: 'overriddenFields', type: 'string[]?' },
+        { name: 'inheritanceUpdatedAt', type: 'string?' },
+      ]},
+    ]
+  },
+  ItemPricing: {
+    x: 250, y: 200,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'id', type: 'string', pk: true },
+      { name: 'type', type: 'FIXED|PERCENT|FORMULA' },
+      { name: 'price', type: 'number' },
+      { name: 'value', type: 'number' },
+      { name: 'name', type: 'BASE|TIME|DISCOUNT|DYNAMIC' },
+      { name: 'order', type: 'number' },
+      { name: 'metadata', type: 'json?' },
+      { name: 'schedule', type: 'any?' },
+      { name: 'validFrom', type: 'string?' },
+      { name: 'validTo', type: 'string?' },
+    ]}]
+  },
+  ChildItem: {
+    x: 250, y: 600,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'itemId', type: 'number', fk: true },
+      { name: 'fractionBasePoints', type: 'number (0-100)' },
+      { name: 'quantity', type: 'number' },
+      { name: 'title', type: 'string' },
+      { name: 'calculatedPrice', type: 'number (cents)' },
+      { name: 'imageUrl', type: 'string?' },
+    ]}]
+  },
+  VariantGroup: {
+    x: 1400, y: 200,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'id', type: 'number', pk: true },
+      { name: 'locationId', type: 'number', fk: true },
+      { name: 'name', type: 'string' },
+      { name: 'type', type: 'EXTRA | VARIANT' },
+      { name: 'description', type: 'string?' },
+      { name: 'min', type: 'number' },
+      { name: 'max', type: 'number?' },
+      { name: 'isVisible', type: 'boolean' },
+    ]}]
+  },
+  Variant: {
+    x: 1700, y: 200,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'id', type: 'number', pk: true },
+      { name: 'variantGroupId', type: 'number', fk: true },
+      { name: 'name', type: 'string' },
+      { name: 'price', type: 'number? (cents)' },
+      { name: 'defaultSelection', type: 'boolean' },
+      { name: 'description', type: 'string?' },
+      { name: 'rank', type: 'number?' },
+      { name: 'itemId', type: 'number?', fk: true },
+    ]}]
+  },
+  Tag: {
+    x: 1400, y: 550,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'id', type: 'number', pk: true },
+      { name: 'key', type: 'string' },
+      { name: 'type', type: 'ALLERGEN|CATEGORY_*|DIETARY|CUSTOM' },
+      { name: 'filter', type: 'boolean?' },
+      { name: 'sort_order', type: 'number?' },
+      { name: 'translations', type: 'Translation[]' },
+    ]}]
+  },
+  ServingCenter: {
+    x: 1400, y: 800,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'id', type: 'number', pk: true },
+      { name: 'locationId', type: 'number', fk: true },
+      { name: 'name', type: 'string' },
+      { name: 'color', type: 'string?' },
+      { name: 'createdAt', type: 'string' },
+      { name: 'updatedAt', type: 'string' },
+    ]}]
+  },
+  PrinterGroup: {
+    x: 250, y: 900,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'id', type: 'string', pk: true },
+      { name: 'name', type: 'string?' },
+      { name: 'type', type: 'string?' },
+      { name: 'locationId', type: 'number', fk: true },
+      { name: 'metaData', type: 'json?' },
+      { name: 'createdAt', type: 'string' },
+      { name: 'updatedAt', type: 'string' },
+    ]}]
+  },
+  Printer: {
+    x: 250, y: 1200,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'id', type: 'string', pk: true },
+      { name: 'printerGroupId', type: 'string', fk: true },
+      { name: 'locationId', type: 'number', fk: true },
+      { name: 'name', type: 'string?' },
+      { name: 'type', type: 'PrinterType?' },
+      { name: 'status', type: 'string?' },
+      { name: 'state', type: 'online | offline' },
+      { name: 'idle', type: 'boolean?' },
+      { name: 'cloudPrntUrl', type: 'string' },
+    ]}]
+  },
+  Location: {
+    x: 800, y: 1100,
+    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
+      { name: 'id', type: 'number', pk: true },
+      { name: 'name', type: 'string' },
+    ]}]
+  },
+  ItemOverrides: {
+    x: 800, y: 50,
+    fieldGroups: [{ label: 'Overridable Fields', type: 'inheritance', fields: [
+      { name: 'title', type: 'string?' },
+      { name: 'description', type: 'string?' },
+      { name: 'ingredients', type: 'string?' },
+      { name: 'isAvailable', type: 'boolean?' },
+      { name: 'imageUrl', type: 'string?' },
+      { name: 'pricings', type: 'ItemPricing[]?' },
+      { name: 'ministock', type: 'number?' },
+    ]}]
+  },
+};
+
+const relationships = [
+  { from: 'InventoryItem', to: 'ItemPricing', cardFrom: '1', cardTo: '*', label: 'pricings', via: 'pricings[]' },
+  { from: 'InventoryItem', to: 'ChildItem', cardFrom: '1', cardTo: '*', label: 'bundles', via: 'childItems[]' },
+  { from: 'InventoryItem', to: 'VariantGroup', cardFrom: '*', cardTo: '*', label: 'variants', via: 'variantGroupIds[]' },
+  { from: 'VariantGroup', to: 'Variant', cardFrom: '1', cardTo: '*', label: 'has', via: 'variants[]' },
+  { from: 'Variant', to: 'InventoryItem', cardFrom: '0..1', cardTo: '1', label: 'item-based', via: 'itemId', dashed: true },
+  { from: 'InventoryItem', to: 'Tag', cardFrom: '*', cardTo: '*', label: 'tagged', via: 'tags / tagIds[]' },
+  { from: 'InventoryItem', to: 'ServingCenter', cardFrom: '*', cardTo: '1', label: 'served at', via: 'servingCenterId' },
+  { from: 'InventoryItem', to: 'PrinterGroup', cardFrom: '*', cardTo: '*', label: 'prints to', via: 'printerGroupIds[]' },
+  { from: 'PrinterGroup', to: 'Printer', cardFrom: '1', cardTo: '*', label: 'has', via: 'printers[]' },
+  { from: 'InventoryItem', to: 'Location', cardFrom: '*', cardTo: '1', label: 'belongs to', via: 'locationId' },
+  { from: 'InventoryItem', to: 'InventoryItem', cardFrom: '0..1', cardTo: '*', label: 'inherits', via: 'parentItemId', self: true },
+  { from: 'ChildItem', to: 'InventoryItem', cardFrom: '*', cardTo: '1', label: 'references', via: 'itemId', dashed: true },
+  { from: 'ItemOverrides', to: 'InventoryItem', cardFrom: '1', cardTo: '1', label: 'overrides', via: 'inherited fields' },
+];
+
+// State
+let scale = 0.85, panX = 0, panY = -20;
+let isDragging = false, dragStartX, dragStartY;
+let allExpanded = false, entityElements = {};
+let draggingEntity = null, entityDragStartX, entityDragStartY, entityOrigX, entityOrigY, entityDragMoved = false;
+
+const canvas = document.getElementById('canvas');
+const svgLines = document.getElementById('svg-lines');
+
+function buildEntities() {
+  for (const [name, entity] of Object.entries(entities)) {
+    const el = document.createElement('div');
+    el.className = `entity${entity.central ? ' central' : ''}`;
+    el.style.left = entity.x + 'px';
+    el.style.top = entity.y + 'px';
+    const total = entity.fieldGroups.reduce((s, g) => s + g.fields.length, 0);
+    el.innerHTML = `
+      <div class="entity-header" data-entity="${name}">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="entity-name">${name}</span>
+          <span class="entity-badge">${total}</span>
+        </div>
+        <span class="entity-toggle">&#9662;</span>
+      </div>
+      <div class="entity-fields">
+        ${entity.fieldGroups.map(g => `
+          <div class="field-group">
+            <div class="field-group-label ${g.type}"><span class="dot"></span>${g.label}</div>
+            ${g.fields.map(f => `
+              <div class="field-row">
+                ${f.pk ? '<span class="field-pk">PK</span>' : ''}${f.fk ? '<span class="field-fk">FK</span>' : ''}
+                <span class="field-name">${f.name}</span><span class="field-type">${f.type}</span>
+              </div>`).join('')}
+          </div>`).join('')}
+      </div>`;
+    canvas.appendChild(el);
+    entityElements[name] = el;
+  }
+}
+
+function toggleEntity(name) {
+  entityElements[name].classList.toggle('expanded');
+  requestAnimationFrame(() => drawRelationships());
+}
+
+function toggleAll() {
+  allExpanded = !allExpanded;
+  document.getElementById('btnToggle').textContent = allExpanded ? 'Collapse All' : 'Expand All';
+  for (const el of Object.values(entityElements)) {
+    if (allExpanded) el.classList.add('expanded'); else el.classList.remove('expanded');
+  }
+  requestAnimationFrame(() => drawRelationships());
+}
+
+function getEntityRect(name) {
+  const el = entityElements[name];
+  if (!el) return { x: 0, y: 0, w: 0, h: 0 };
+  return { x: parseFloat(el.style.left), y: parseFloat(el.style.top), w: el.offsetWidth, h: el.offsetHeight };
+}
+
+function getConnectionPoint(fromName, toName) {
+  const fr = getEntityRect(fromName), tr = getEntityRect(toName);
+  const fCx = fr.x + fr.w/2, fCy = fr.y + fr.h/2, tCx = tr.x + tr.w/2, tCy = tr.y + tr.h/2;
+  const dx = tCx - fCx, dy = tCy - fCy;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx > 0
+      ? { from: { x: fr.x + fr.w, y: fCy }, to: { x: tr.x, y: tCy } }
+      : { from: { x: fr.x, y: fCy }, to: { x: tr.x + tr.w, y: tCy } };
+  }
+  return dy > 0
+    ? { from: { x: fCx, y: fr.y + fr.h }, to: { x: tCx, y: tr.y } }
+    : { from: { x: fCx, y: fr.y }, to: { x: tCx, y: tr.y + tr.h } };
+}
+
+function drawRelationships() {
+  let c = '';
+  for (let i = 0; i < relationships.length; i++) {
+    const rel = relationships[i];
+    if (rel.self) {
+      const r = getEntityRect(rel.from);
+      const sx = r.x + r.w, sy = r.y + 20, ey = r.y + r.h - 20, cx = 70;
+      c += `<path class="rel-line" data-rel="${i}" d="M${sx},${sy} C${sx+cx},${sy} ${sx+cx},${ey} ${sx},${ey}" ${rel.dashed?'stroke-dasharray="6,4"':''}/>`;
+      c += `<path data-rel="${i}" d="M${sx},${sy} C${sx+cx},${sy} ${sx+cx},${ey} ${sx},${ey}" style="pointer-events:stroke;cursor:pointer;stroke-width:12;stroke:transparent;fill:none;"/>`;
+      c += `<text class="rel-marker" data-rel="${i}" x="${sx+cx+4}" y="${(sy+ey)/2-8}" text-anchor="start">${rel.cardFrom} ── ${rel.cardTo}</text>`;
+      c += `<text class="rel-label" data-rel="${i}" x="${sx+cx+4}" y="${(sy+ey)/2+6}" text-anchor="start">${rel.label}</text>`;
+    } else {
+      const { from, to } = getConnectionPoint(rel.from, rel.to);
+      const fx=from.x,fy=from.y,tx=to.x,ty=to.y,mx=(fx+tx)/2,my=(fy+ty)/2;
+      const adx=Math.abs(tx-fx), ady=Math.abs(ty-fy);
+      let path;
+      if (adx > ady) {
+        const cp=adx*0.4, c1x=fx+(tx>fx?cp:-cp), c2x=tx-(tx>fx?cp:-cp);
+        path = `M${fx},${fy} C${c1x},${fy} ${c2x},${ty} ${tx},${ty}`;
+      } else {
+        const cp=ady*0.4, c1y=fy+(ty>fy?cp:-cp), c2y=ty-(ty>fy?cp:-cp);
+        path = `M${fx},${fy} C${fx},${c1y} ${tx},${c2y} ${tx},${ty}`;
+      }
+      c += `<path class="rel-line" data-rel="${i}" d="${path}" ${rel.dashed?'stroke-dasharray="6,4"':''}/>`;
+      c += `<path data-rel="${i}" d="${path}" style="pointer-events:stroke;cursor:pointer;stroke-width:12;stroke:transparent;fill:none;"/>`;
+      const co=18, fa=Math.atan2(ty-fy,tx-fx), ta=Math.atan2(fy-ty,fx-tx);
+      c += `<text class="rel-marker" data-rel="${i}" x="${fx+Math.cos(fa)*co}" y="${fy+Math.sin(fa)*co-6}" text-anchor="middle">${rel.cardFrom}</text>`;
+      c += `<text class="rel-marker" data-rel="${i}" x="${tx+Math.cos(ta)*co}" y="${ty+Math.sin(ta)*co-6}" text-anchor="middle">${rel.cardTo}</text>`;
+      c += `<text class="rel-label" data-rel="${i}" x="${mx}" y="${my-6}" text-anchor="middle">${rel.label}</text>`;
+      const as=7, aa=Math.atan2(fy-ty,fx-tx);
+      c += `<polygon data-rel="${i}" points="${tx},${ty} ${tx+Math.cos(aa+.4)*as},${ty+Math.sin(aa+.4)*as} ${tx+Math.cos(aa-.4)*as},${ty+Math.sin(aa-.4)*as}" style="fill:var(--rel-line);stroke:none;"/>`;
+    }
+  }
+  svgLines.innerHTML = c;
+  svgLines.querySelectorAll('[data-rel]').forEach(el => {
+    el.addEventListener('mouseenter', e => highlightRel(parseInt(el.dataset.rel), e));
+    el.addEventListener('mouseleave', () => unhighlightRel(parseInt(el.dataset.rel)));
+  });
+}
+
+function highlightRel(i, e) {
+  const rel = relationships[i];
+  svgLines.querySelectorAll(`[data-rel="${i}"]`).forEach(el => el.classList.add('highlighted'));
+  if (entityElements[rel.from]) entityElements[rel.from].classList.add('highlighted');
+  if (rel.from !== rel.to && entityElements[rel.to]) entityElements[rel.to].classList.add('highlighted');
+  const tt = document.getElementById('relTooltip');
+  document.getElementById('relTooltipText').textContent = `${rel.from} ${rel.cardFrom}──${rel.cardTo} ${rel.to}`;
+  document.getElementById('relTooltipVia').textContent = `via: ${rel.via}`;
+  tt.style.left = (e.clientX+12)+'px'; tt.style.top = (e.clientY-10)+'px';
+  tt.classList.add('visible');
+}
+
+function unhighlightRel(i) {
+  const rel = relationships[i];
+  svgLines.querySelectorAll(`[data-rel="${i}"]`).forEach(el => el.classList.remove('highlighted'));
+  if (entityElements[rel.from]) entityElements[rel.from].classList.remove('highlighted');
+  if (entityElements[rel.to]) entityElements[rel.to].classList.remove('highlighted');
+  document.getElementById('relTooltip').classList.remove('visible');
+}
+
+function applyTransform() {
+  canvas.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
+  document.getElementById('zoomLevel').textContent = Math.round(scale*100)+'%';
+  updateMinimap();
+}
+
+// Input handling
+document.addEventListener('mousedown', e => {
+  const header = e.target.closest('.entity-header');
+  if (header && header.dataset.entity) {
+    e.preventDefault(); e.stopPropagation();
+    draggingEntity = header.dataset.entity; entityDragMoved = false;
+    entityDragStartX = e.clientX; entityDragStartY = e.clientY;
+    const el = entityElements[draggingEntity];
+    entityOrigX = parseFloat(el.style.left); entityOrigY = parseFloat(el.style.top);
+    el.style.zIndex = 10; el.style.cursor = 'grabbing';
+    return;
+  }
+  if (e.target.closest('.erd-toolbar') || e.target.closest('.legend') || e.target.closest('.minimap') || e.target.closest('.entity')) return;
+  isDragging = true; dragStartX = e.clientX - panX; dragStartY = e.clientY - panY;
+});
+
+document.addEventListener('mousemove', e => {
+  if (draggingEntity) {
+    const dx = (e.clientX - entityDragStartX)/scale, dy = (e.clientY - entityDragStartY)/scale;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) entityDragMoved = true;
+    const el = entityElements[draggingEntity];
+    el.style.left = (entityOrigX+dx)+'px'; el.style.top = (entityOrigY+dy)+'px';
+    entities[draggingEntity].x = entityOrigX+dx; entities[draggingEntity].y = entityOrigY+dy;
+    drawRelationships(); updateMinimap(); return;
+  }
+  if (!isDragging) return;
+  panX = e.clientX - dragStartX; panY = e.clientY - dragStartY; applyTransform();
+});
+
+document.addEventListener('mouseup', () => {
+  if (draggingEntity) {
+    const el = entityElements[draggingEntity];
+    el.style.zIndex = 2; el.style.cursor = '';
+    if (!entityDragMoved) toggleEntity(draggingEntity);
+    draggingEntity = null; return;
+  }
+  isDragging = false;
+});
+
+document.addEventListener('wheel', e => {
+  if (e.target.closest('.legend')) return;
+  e.preventDefault();
+  const d = e.deltaY > 0 ? -0.08 : 0.08;
+  const ns = Math.max(0.2, Math.min(2.5, scale+d));
+  const wx = (e.clientX-panX)/scale, wy = (e.clientY-panY)/scale;
+  scale = ns; panX = e.clientX-wx*scale; panY = e.clientY-wy*scale;
+  applyTransform();
+}, { passive: false });
+
+function zoomBy(d) {
+  const ns = Math.max(0.2, Math.min(2.5, scale+d));
+  const cx=window.innerWidth/2, cy=window.innerHeight/2;
+  const wx=(cx-panX)/scale, wy=(cy-panY)/scale;
+  scale = ns; panX=cx-wx*scale; panY=cy-wy*scale; applyTransform();
+}
+
+function resetView() { scale=0.85; panX=0; panY=-20; applyTransform(); }
+
+function updateMinimap() {
+  const mm = document.getElementById('minimap'), mmW=160, mmH=100;
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  for (const [n] of Object.entries(entities)) {
+    const r = getEntityRect(n);
+    minX=Math.min(minX,r.x); minY=Math.min(minY,r.y);
+    maxX=Math.max(maxX,r.x+r.w); maxY=Math.max(maxY,r.y+r.h);
+  }
+  const p=60; minX-=p; minY-=p; maxX+=p; maxY+=p;
+  const s = Math.min(mmW/(maxX-minX), mmH/(maxY-minY));
+  let h = '';
+  for (const [n, ent] of Object.entries(entities)) {
+    const r = getEntityRect(n);
+    h += `<div class="minimap-entity${ent.central?' central':''}" style="left:${(r.x-minX)*s}px;top:${(r.y-minY)*s}px;width:${Math.max(r.w*s,4)}px;height:${Math.max(r.h*s,3)}px;"></div>`;
+  }
+  h += `<div class="minimap-viewport" style="left:${(-panX/scale-minX)*s}px;top:${(-panY/scale-minY)*s}px;width:${(innerWidth/scale)*s}px;height:${(innerHeight/scale)*s}px;"></div>`;
+  mm.innerHTML = h;
+}
+
+const ro = new ResizeObserver(() => requestAnimationFrame(() => drawRelationships()));
+buildEntities();
+for (const el of Object.values(entityElements)) ro.observe(el);
+requestAnimationFrame(() => { drawRelationships(); applyTransform(); });
+window.addEventListener('resize', () => { drawRelationships(); updateMinimap(); });
+document.addEventListener('keydown', e => {
+  if (e.key==='0') resetView();
+  if (e.key==='+'||e.key==='=') zoomBy(0.15);
+  if (e.key==='-') zoomBy(-0.15);
+  if (e.key==='e') toggleAll();
+});
+</script>
+</body>
+</html>

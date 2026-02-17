@@ -176,6 +176,65 @@
     .hidden {
       display: none !important;
     }
+
+    /* Data Models page styles */
+    .models-page {
+      padding-top: 48px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .models-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: #f8f8fa;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .models-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .models-toolbar h2 {
+      font-size: 16px;
+      color: #1a1a2e;
+      font-weight: 600;
+    }
+    .model-selector {
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #333;
+      cursor: pointer;
+      outline: none;
+      min-width: 180px;
+    }
+    .model-selector:hover {
+      border-color: #e94560;
+    }
+    .model-selector:focus {
+      border-color: #e94560;
+      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.15);
+    }
+    .models-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .model-hint {
+      font-size: 12px;
+      color: #999;
+    }
+    .model-frame {
+      flex: 1;
+      border: none;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -191,6 +250,7 @@
     <div class="nav-links">
       <a href="?" id="nav-docs" class="active">API Reference</a>
       <a href="?page=examples" id="nav-examples">Examples</a>
+      <a href="?page=models" id="nav-models">Data Models</a>
       <a href="https://github.com/karmadev/karma-common-api-docs" target="_blank">GitHub</a>
     </div>
     <div class="version-selector">
@@ -254,6 +314,21 @@
     </div>
   </div>
 
+  <div class="models-page hidden" id="models-container">
+    <div class="models-toolbar">
+      <div class="models-toolbar-left">
+        <h2>Data Models</h2>
+        <select class="model-selector" id="model-selector" onchange="switchModel(this.value)">
+          <option value="inventory">Inventory</option>
+        </select>
+      </div>
+      <div class="models-toolbar-right">
+        <span class="model-hint">Scroll to zoom &middot; Drag to pan &middot; Click headers to expand</span>
+      </div>
+    </div>
+    <iframe class="model-frame" id="model-frame" src="models/inventory.html"></iframe>
+  </div>
+
   <script>
     // Configuration
     const BASE_URL = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
@@ -285,6 +360,16 @@
     function viewMarkdown(event, path) {
       // For GitHub Pages, markdown files open as raw
       // In the future, we could render them inline
+    }
+
+    // Switch data model in iframe
+    function switchModel(modelId) {
+      const frame = document.getElementById('model-frame');
+      frame.src = `models/${modelId}.html`;
+      // Update URL without reload
+      const url = new URL(window.location.href);
+      url.searchParams.set('model', modelId);
+      history.replaceState(null, '', url.toString());
     }
 
     // Load version manifest and populate dropdown
@@ -372,19 +457,33 @@
       const page = getCurrentPage();
       const apiContainer = document.getElementById('api-container');
       const examplesContainer = document.getElementById('examples-container');
+      const modelsContainer = document.getElementById('models-container');
       const navDocs = document.getElementById('nav-docs');
       const navExamples = document.getElementById('nav-examples');
+      const navModels = document.getElementById('nav-models');
+
+      // Hide all pages
+      apiContainer.classList.add('hidden');
+      examplesContainer.classList.add('hidden');
+      modelsContainer.classList.add('hidden');
+      navDocs.classList.remove('active');
+      navExamples.classList.remove('active');
+      navModels.classList.remove('active');
 
       if (page === 'examples') {
-        apiContainer.classList.add('hidden');
         examplesContainer.classList.remove('hidden');
-        navDocs.classList.remove('active');
         navExamples.classList.add('active');
+      } else if (page === 'models') {
+        modelsContainer.classList.remove('hidden');
+        navModels.classList.add('active');
+        // Load model from URL param or default to inventory
+        const params = new URLSearchParams(window.location.search);
+        const model = params.get('model') || 'inventory';
+        document.getElementById('model-selector').value = model;
+        document.getElementById('model-frame').src = `models/${model}.html`;
       } else {
-        examplesContainer.classList.add('hidden');
         apiContainer.classList.remove('hidden');
         navDocs.classList.add('active');
-        navExamples.classList.remove('active');
         initScalar();
       }
     }
