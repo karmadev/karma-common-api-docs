@@ -554,10 +554,53 @@ const entities = {
   },
   Location: {
     x: 800, y: 1100,
-    fieldGroups: [{ label: 'Fields', type: 'required', fields: [
-      { name: 'id', type: 'number', pk: true },
-      { name: 'name', type: 'string' },
-    ]}]
+    fieldGroups: [
+      { label: 'Primary', type: 'required', fields: [
+        { name: 'id', type: 'int4', pk: true },
+        { name: 'uuid', type: 'text' },
+        { name: 'name', type: 'varchar(255)' },
+        { name: 'created_date', type: 'timestamptz' },
+        { name: 'created_by_user_id', type: 'int4', fk: true },
+      ]},
+      { label: 'Location', type: 'optional', fields: [
+        { name: 'latitude', type: 'float8' },
+        { name: 'longitude', type: 'float8' },
+        { name: 'address', type: 'varchar(255)' },
+        { name: 'zip', type: 'varchar(255)' },
+        { name: 'country', type: 'varchar(255)' },
+        { name: 'city', type: 'varchar(255)' },
+        { name: 'geom', type: 'geography(Point,4326)' },
+        { name: 'timezone', type: 'varchar(64)' },
+        { name: 'type', type: 'varchar(64)' },
+        { name: 'description', type: 'text' },
+        { name: 'phone', type: 'varchar(32)' },
+        { name: 'website', type: 'varchar(255)' },
+        { name: 'website_short', type: 'varchar(255)' },
+        { name: 'external_name', type: 'text' },
+        { name: 'org_nr', type: 'text' },
+      ]},
+      { label: 'References', type: 'relation', fields: [
+        { name: 'company_id', type: 'int4', fk: true },
+        { name: 'country_id', type: 'int4', fk: true },
+        { name: 'timezone_id', type: 'int4', fk: true },
+        { name: 'currency_id', type: 'int4', fk: true },
+        { name: 'vat_id', type: 'int4', fk: true },
+        { name: 'location_type', type: 'text (def: store)' },
+      ]},
+      { label: 'Currency', type: 'financial', fields: [
+        { name: 'currency', type: 'varchar(16)' },
+        { name: 'currency_string', type: 'varchar(16)' },
+      ]},
+      { label: 'Branding', type: 'optional', fields: [
+        { name: 'logo_image_url', type: 'varchar(510)' },
+        { name: 'feature_image_url', type: 'varchar(510)' },
+      ]},
+      { label: 'Flags', type: 'integration', fields: [
+        { name: 'hidden', type: 'bool (def: false)' },
+        { name: 'deleted', type: 'bool (def: false)' },
+        { name: 'verified', type: 'bool (def: false)' },
+      ]},
+    ]
   },
   ItemOverrides: {
     x: 800, y: 50,
