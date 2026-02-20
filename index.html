@@ -177,6 +177,19 @@
       display: none !important;
     }
 
+    /* Architecture page styles */
+    .architecture-page {
+      padding-top: 48px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .architecture-frame {
+      flex: 1;
+      border: none;
+      width: 100%;
+    }
+
     /* Data Models page styles */
     .models-page {
       padding-top: 48px;
@@ -251,7 +264,7 @@
       <a href="?" id="nav-docs" class="active">API Reference</a>
       <a href="?page=examples" id="nav-examples">Examples</a>
       <a href="?page=models" id="nav-models">Data Models</a>
-      <!-- <a href="https://github.com/karmadev/karma-common-api-docs" target="_blank">GitHub</a> -->
+      <a href="?page=architecture" id="nav-architecture" style="display:none">Architecture</a>
     </div>
     <div class="version-selector">
       <label for="version">Version:</label>
@@ -327,6 +340,10 @@
       </div>
     </div>
     <iframe class="model-frame" id="model-frame" src="models/inventory.html"></iframe>
+  </div>
+
+  <div class="architecture-page hidden" id="architecture-container">
+    <iframe class="architecture-frame" id="architecture-frame" src="about:blank"></iframe>
   </div>
 
   <script>
@@ -458,17 +475,21 @@
       const apiContainer = document.getElementById('api-container');
       const examplesContainer = document.getElementById('examples-container');
       const modelsContainer = document.getElementById('models-container');
+      const architectureContainer = document.getElementById('architecture-container');
       const navDocs = document.getElementById('nav-docs');
       const navExamples = document.getElementById('nav-examples');
       const navModels = document.getElementById('nav-models');
+      const navArchitecture = document.getElementById('nav-architecture');
 
       // Hide all pages
       apiContainer.classList.add('hidden');
       examplesContainer.classList.add('hidden');
       modelsContainer.classList.add('hidden');
+      architectureContainer.classList.add('hidden');
       navDocs.classList.remove('active');
       navExamples.classList.remove('active');
       navModels.classList.remove('active');
+      navArchitecture.classList.remove('active');
 
       if (page === 'examples') {
         examplesContainer.classList.remove('hidden');
@@ -481,6 +502,10 @@
         const model = params.get('model') || 'inventory';
         document.getElementById('model-selector').value = model;
         document.getElementById('model-frame').src = `models/${model}.html`;
+      } else if (page === 'architecture') {
+        architectureContainer.classList.remove('hidden');
+        navArchitecture.classList.add('active');
+        document.getElementById('architecture-frame').src = 'architecture.html';
       } else {
         apiContainer.classList.remove('hidden');
         navDocs.classList.add('active');
