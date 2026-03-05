@@ -12511,6 +12511,460 @@ paths:
                   requestId: req_123456
                   timestamp: 2025-01-15T10:30:00.000Z
                   executionTimeMs: 10
+  /api/v1/bookings/{id}/check-in:
+    post:
+      summary: Check in booking
+      tags:
+        - Bookings
+      description: |-
+        Mark a confirmed booking as checked in
+
+        **Permissions:** ⚪ `bookings.manage`
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: id
+          required: true
+          description: Booking ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: Unique booking ID
+                      locationId:
+                        type: number
+                        description: Location ID
+                      tableId:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: Table/resource ID (QR code UUID)
+                      bookingDate:
+                        type: string
+                        format: date
+                        description: Date of the booking (YYYY-MM-DD)
+                      startTime:
+                        type: string
+                        description: Start time (HH:MM:SS)
+                      endTime:
+                        type: string
+                        description: End time (HH:MM:SS)
+                      timezone:
+                        type: string
+                        description: Timezone for the booking
+                      primaryUserId:
+                        type: number
+                        description: Primary guest user ID
+                      guestCount:
+                        type: number
+                        minimum: 1
+                        description: Number of guests
+                      occasion:
+                        type: string
+                        enum:
+                          - none
+                          - birthday
+                          - anniversary
+                          - business
+                          - date
+                          - celebration
+                          - other
+                        description: Occasion for the booking
+                      specialRequests:
+                        type: string
+                        nullable: true
+                        description: Guest special requests
+                      internalNotes:
+                        type: string
+                        nullable: true
+                        description: Staff-only notes
+                      status:
+                        type: string
+                        enum:
+                          - pending
+                          - confirmed
+                          - seated
+                          - completed
+                          - cancelled
+                          - no_show
+                        description: Booking status
+                      paymentType:
+                        type: string
+                        enum:
+                          - none
+                          - deposit
+                          - full_prepayment
+                        description: Payment type required for booking
+                      depositAmountCents:
+                        type: number
+                        nullable: true
+                        description: Deposit amount in cents
+                      purchaseId:
+                        type: number
+                        nullable: true
+                        description: Linked purchase ID
+                      confirmationCode:
+                        type: string
+                        description: Unique confirmation code for guest
+                      bookingSource:
+                        type: string
+                        enum:
+                          - direct
+                          - website
+                          - phone
+                          - walkin
+                          - third_party
+                        description: Source of the booking
+                      estimatedRevenueCents:
+                        type: number
+                        nullable: true
+                        description: AI-estimated revenue
+                      createdAt:
+                        type: string
+                        format: date-time
+                        description: Creation timestamp
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        description: Last update timestamp
+                      confirmedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Confirmation timestamp
+                      seatedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Seated timestamp
+                      completedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Completion timestamp
+                      cancelledAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Cancellation timestamp
+                      userName:
+                        type: string
+                        nullable: true
+                        description: Primary guest name
+                      userEmail:
+                        type: string
+                        nullable: true
+                        description: Primary guest email
+                      userPhone:
+                        type: string
+                        nullable: true
+                        description: Primary guest phone
+                      tableName:
+                        type: string
+                        nullable: true
+                        description: Table name
+                    required:
+                      - id
+                      - locationId
+                      - bookingDate
+                      - startTime
+                      - endTime
+                      - timezone
+                      - primaryUserId
+                      - guestCount
+                      - status
+                      - confirmationCode
+                      - createdAt
+                      - updatedAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "401":
+          description: Unauthorized - Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: UNAUTHORIZED
+                  message: Authentication required
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
   /api/v1/bookings/{id}/history:
     get:
       summary: Get booking history
@@ -19767,6 +20221,4541 @@ paths:
                   requestId: req_123456
                   timestamp: 2025-01-15T10:30:00.000Z
                   executionTimeMs: 4
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/bookings/{id}/pre-order:
+    get:
+      summary: Get pre-order items
+      tags:
+        - Bookings - Pre-order
+      description: |-
+        Get all pre-order items for a booking
+
+        **Permissions:** 🔵 `bookings.read`
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: id
+          required: true
+          description: Booking ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                          format: uuid
+                        kitchen_dispatch_id:
+                          type: string
+                          format: uuid
+                        item_id:
+                          type: number
+                        quantity:
+                          type: number
+                        price:
+                          type: number
+                          description: Price in cents
+                        pre_order:
+                          type: boolean
+                        created_at:
+                          type: string
+                          format: date-time
+                        item_name:
+                          type: string
+                          nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "401":
+          description: Unauthorized - Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: UNAUTHORIZED
+                  message: Authentication required
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+    post:
+      summary: Add pre-order item
+      tags:
+        - Bookings - Pre-order
+      description: |-
+        Add a pre-order item to a booking. Creates a pre-arrival tab if needed.
+
+        **Permissions:** ⚪ `bookings.manage`
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: id
+          required: true
+          description: Booking ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                itemId:
+                  type: number
+                quantity:
+                  type: number
+                  minimum: 1
+              required:
+                - itemId
+                - quantity
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        format: uuid
+                      kitchen_dispatch_id:
+                        type: string
+                        format: uuid
+                      item_id:
+                        type: number
+                      quantity:
+                        type: number
+                      price:
+                        type: number
+                        description: Price in cents
+                      pre_order:
+                        type: boolean
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "401":
+          description: Unauthorized - Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: UNAUTHORIZED
+                  message: Authentication required
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/bookings/{id}/members:
+    get:
+      summary: List booking members
+      tags:
+        - Bookings
+      description: |-
+        List members of a booking
+
+        **Permissions:** 🔵 `bookings.read`
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: id
+          required: true
+          description: Booking ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          bookingId:
+                            type: string
+                            format: uuid
+                          userId:
+                            type: number
+                            nullable: true
+                          isPrimary:
+                            type: boolean
+                          guestName:
+                            type: string
+                            nullable: true
+                          guestEmail:
+                            type: string
+                            nullable: true
+                          rsvpStatus:
+                            type: string
+                            enum:
+                              - pending
+                              - accepted
+                              - declined
+                          createdAt:
+                            type: string
+                            format: date-time
+                        required:
+                          - id
+                          - bookingId
+                          - isPrimary
+                          - createdAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "401":
+          description: Unauthorized - Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: UNAUTHORIZED
+                  message: Authentication required
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+    post:
+      summary: Add booking member
+      tags:
+        - Bookings
+      description: |-
+        Add a member to a booking
+
+        **Permissions:** ⚪ `bookings.manage`
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: id
+          required: true
+          description: Booking ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: number
+                guestName:
+                  type: string
+                guestEmail:
+                  type: string
+                rsvpStatus:
+                  type: string
+                  enum:
+                    - pending
+                    - accepted
+                    - declined
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      bookingId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: number
+                        nullable: true
+                      isPrimary:
+                        type: boolean
+                      guestName:
+                        type: string
+                        nullable: true
+                      guestEmail:
+                        type: string
+                        nullable: true
+                      rsvpStatus:
+                        type: string
+                        enum:
+                          - pending
+                          - accepted
+                          - declined
+                      createdAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - bookingId
+                      - isPrimary
+                      - createdAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "401":
+          description: Unauthorized - Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: UNAUTHORIZED
+                  message: Authentication required
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/bookings/{id}/members/{memberId}:
+    patch:
+      summary: Update booking member
+      tags:
+        - Bookings
+      description: |-
+        Update a booking member RSVP status
+
+        **Permissions:** ⚪ `bookings.manage`
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: id
+          required: true
+          description: Booking ID
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: memberId
+          required: true
+          description: Member ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rsvpStatus:
+                  type: string
+                  enum:
+                    - pending
+                    - accepted
+                    - declined
+              required:
+                - rsvpStatus
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      bookingId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: number
+                        nullable: true
+                      isPrimary:
+                        type: boolean
+                      guestName:
+                        type: string
+                        nullable: true
+                      guestEmail:
+                        type: string
+                        nullable: true
+                      rsvpStatus:
+                        type: string
+                        enum:
+                          - pending
+                          - accepted
+                          - declined
+                      createdAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - bookingId
+                      - isPrimary
+                      - createdAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "401":
+          description: Unauthorized - Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: UNAUTHORIZED
+                  message: Authentication required
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+    delete:
+      summary: Remove booking member
+      tags:
+        - Bookings
+      description: |-
+        Remove a non-primary member from a booking
+
+        **Permissions:** ⚪ `bookings.manage`
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: id
+          required: true
+          description: Booking ID
+        - schema:
+            type: string
+            format: uuid
+          in: path
+          name: memberId
+          required: true
+          description: Member ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "401":
+          description: Unauthorized - Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: UNAUTHORIZED
+                  message: Authentication required
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/bookings/rsvp:
+    post:
+      summary: RSVP to booking
+      tags:
+        - Bookings
+      description: "Public endpoint: RSVP to a booking using confirmation code (no auth required)"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirmationCode:
+                  type: string
+                guestName:
+                  type: string
+                guestEmail:
+                  type: string
+                rsvpStatus:
+                  type: string
+                  enum:
+                    - pending
+                    - accepted
+                    - declined
+              required:
+                - confirmationCode
+                - guestName
+                - rsvpStatus
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      bookingId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: number
+                        nullable: true
+                      isPrimary:
+                        type: boolean
+                      guestName:
+                        type: string
+                        nullable: true
+                      guestEmail:
+                        type: string
+                        nullable: true
+                      rsvpStatus:
+                        type: string
+                        enum:
+                          - pending
+                          - accepted
+                          - declined
+                      createdAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - bookingId
+                      - isPrimary
+                      - createdAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      bookingId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: number
+                        nullable: true
+                      isPrimary:
+                        type: boolean
+                      guestName:
+                        type: string
+                        nullable: true
+                      guestEmail:
+                        type: string
+                        nullable: true
+                      rsvpStatus:
+                        type: string
+                        enum:
+                          - pending
+                          - accepted
+                          - declined
+                      createdAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - bookingId
+                      - isPrimary
+                      - createdAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/bookings/by-code/{code}/members:
+    get:
+      summary: Get booking members by code
+      tags:
+        - Bookings
+      description: "Public endpoint: Get booking members using confirmation code (no auth required)"
+      security: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: code
+          required: true
+          description: Confirmation code
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          bookingId:
+                            type: string
+                            format: uuid
+                          userId:
+                            type: number
+                            nullable: true
+                          isPrimary:
+                            type: boolean
+                          guestName:
+                            type: string
+                            nullable: true
+                          guestEmail:
+                            type: string
+                            nullable: true
+                          rsvpStatus:
+                            type: string
+                            enum:
+                              - pending
+                              - accepted
+                              - declined
+                          createdAt:
+                            type: string
+                            format: date-time
+                        required:
+                          - id
+                          - bookingId
+                          - isPrimary
+                          - createdAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+    post:
+      summary: Add booking member by code
+      tags:
+        - Bookings
+      description: "Public endpoint: Add a member to a booking using confirmation code (no auth required)"
+      security: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: code
+          required: true
+          description: Confirmation code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                guestName:
+                  type: string
+                guestEmail:
+                  type: string
+              required:
+                - guestName
+                - guestEmail
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      bookingId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: number
+                        nullable: true
+                      isPrimary:
+                        type: boolean
+                      guestName:
+                        type: string
+                        nullable: true
+                      guestEmail:
+                        type: string
+                        nullable: true
+                      rsvpStatus:
+                        type: string
+                        enum:
+                          - pending
+                          - accepted
+                          - declined
+                      createdAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - bookingId
+                      - isPrimary
+                      - createdAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/bookings/by-code/{code}/cancel:
+    post:
+      summary: Cancel booking by confirmation code
+      tags:
+        - Bookings
+      description: "Public endpoint: cancel a booking using confirmation code (no auth required)"
+      security: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: code
+          required: true
+          description: Confirmation code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: Unique booking ID
+                      locationId:
+                        type: number
+                        description: Location ID
+                      tableId:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: Table/resource ID (QR code UUID)
+                      bookingDate:
+                        type: string
+                        format: date
+                        description: Date of the booking (YYYY-MM-DD)
+                      startTime:
+                        type: string
+                        description: Start time (HH:MM:SS)
+                      endTime:
+                        type: string
+                        description: End time (HH:MM:SS)
+                      timezone:
+                        type: string
+                        description: Timezone for the booking
+                      primaryUserId:
+                        type: number
+                        description: Primary guest user ID
+                      guestCount:
+                        type: number
+                        minimum: 1
+                        description: Number of guests
+                      occasion:
+                        type: string
+                        enum:
+                          - none
+                          - birthday
+                          - anniversary
+                          - business
+                          - date
+                          - celebration
+                          - other
+                        description: Occasion for the booking
+                      specialRequests:
+                        type: string
+                        nullable: true
+                        description: Guest special requests
+                      internalNotes:
+                        type: string
+                        nullable: true
+                        description: Staff-only notes
+                      status:
+                        type: string
+                        enum:
+                          - pending
+                          - confirmed
+                          - seated
+                          - completed
+                          - cancelled
+                          - no_show
+                        description: Booking status
+                      paymentType:
+                        type: string
+                        enum:
+                          - none
+                          - deposit
+                          - full_prepayment
+                        description: Payment type required for booking
+                      depositAmountCents:
+                        type: number
+                        nullable: true
+                        description: Deposit amount in cents
+                      purchaseId:
+                        type: number
+                        nullable: true
+                        description: Linked purchase ID
+                      confirmationCode:
+                        type: string
+                        description: Unique confirmation code for guest
+                      bookingSource:
+                        type: string
+                        enum:
+                          - direct
+                          - website
+                          - phone
+                          - walkin
+                          - third_party
+                        description: Source of the booking
+                      estimatedRevenueCents:
+                        type: number
+                        nullable: true
+                        description: AI-estimated revenue
+                      createdAt:
+                        type: string
+                        format: date-time
+                        description: Creation timestamp
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        description: Last update timestamp
+                      confirmedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Confirmation timestamp
+                      seatedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Seated timestamp
+                      completedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Completion timestamp
+                      cancelledAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Cancellation timestamp
+                      userName:
+                        type: string
+                        nullable: true
+                        description: Primary guest name
+                      userEmail:
+                        type: string
+                        nullable: true
+                        description: Primary guest email
+                      userPhone:
+                        type: string
+                        nullable: true
+                        description: Primary guest phone
+                      tableName:
+                        type: string
+                        nullable: true
+                        description: Table name
+                    required:
+                      - id
+                      - locationId
+                      - bookingDate
+                      - startTime
+                      - endTime
+                      - timezone
+                      - primaryUserId
+                      - guestCount
+                      - status
+                      - confirmationCode
+                      - createdAt
+                      - updatedAt
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/booking-waitlist/by-code/{code}:
+    get:
+      summary: Get waitlist entry by code
+      tags:
+        - Bookings - Waitlist
+      description: "Public endpoint: Get a waitlist entry by confirmation code (no auth required)"
+      security: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: code
+          required: true
+          description: Confirmation code
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      locationId:
+                        type: number
+                      userId:
+                        type: number
+                      requestedDate:
+                        type: string
+                        format: date
+                      preferredStartTime:
+                        type: string
+                        nullable: true
+                      preferredEndTime:
+                        type: string
+                        nullable: true
+                      partySize:
+                        type: number
+                      status:
+                        type: string
+                        enum:
+                          - waiting
+                          - notified
+                          - converted
+                          - expired
+                          - removed
+                      convertedBookingId:
+                        type: string
+                        format: uuid
+                        nullable: true
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      notifiedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      userName:
+                        type: string
+                        nullable: true
+                      userEmail:
+                        type: string
+                        nullable: true
+                      userPhone:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/booking-waitlist/by-code/{code}/accept:
+    post:
+      summary: Accept waitlist match
+      tags:
+        - Bookings - Waitlist
+      description: "Public endpoint: Accept a waitlist match offer (no auth required)"
+      security: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: code
+          required: true
+          description: Confirmation code
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      locationId:
+                        type: number
+                      userId:
+                        type: number
+                      requestedDate:
+                        type: string
+                        format: date
+                      preferredStartTime:
+                        type: string
+                        nullable: true
+                      preferredEndTime:
+                        type: string
+                        nullable: true
+                      partySize:
+                        type: number
+                      status:
+                        type: string
+                        enum:
+                          - waiting
+                          - notified
+                          - converted
+                          - expired
+                          - removed
+                      convertedBookingId:
+                        type: string
+                        format: uuid
+                        nullable: true
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      notifiedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      userName:
+                        type: string
+                        nullable: true
+                      userEmail:
+                        type: string
+                        nullable: true
+                      userPhone:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/booking-waitlist/by-code/{code}/decline:
+    post:
+      summary: Decline waitlist match
+      tags:
+        - Bookings - Waitlist
+      description: "Public endpoint: Decline a waitlist match offer (no auth required)"
+      security: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: code
+          required: true
+          description: Confirmation code
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      locationId:
+                        type: number
+                      userId:
+                        type: number
+                      requestedDate:
+                        type: string
+                        format: date
+                      preferredStartTime:
+                        type: string
+                        nullable: true
+                      preferredEndTime:
+                        type: string
+                        nullable: true
+                      partySize:
+                        type: number
+                      status:
+                        type: string
+                        enum:
+                          - waiting
+                          - notified
+                          - converted
+                          - expired
+                          - removed
+                      convertedBookingId:
+                        type: string
+                        format: uuid
+                        nullable: true
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      notifiedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      userName:
+                        type: string
+                        nullable: true
+                      userEmail:
+                        type: string
+                        nullable: true
+                      userPhone:
+                        type: string
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
+        "404":
+          description: Not Found - Resource does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RESOURCE_NOT_FOUND
+                  message: The requested resource was not found
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 2
+        "429":
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Rate limit exceeded. Please try again later.
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 1
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: An unexpected error occurred
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 10
+  /api/v1/booking-waitlist/by-code/{code}/leave:
+    delete:
+      summary: Leave waitlist
+      tags:
+        - Bookings - Waitlist
+      description: "Public endpoint: Leave the waitlist (no auth required)"
+      security: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: code
+          required: true
+          description: Confirmation code
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: boolean
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - data
+                  - meta
+        "400":
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
+                    required:
+                      - code
+                      - message
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      executionTimeMs:
+                        type: number
+                    required:
+                      - requestId
+                      - timestamp
+                      - executionTimeMs
+                required:
+                  - status
+                  - error
+                  - meta
+              example:
+                status: error
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid input parameters
+                meta:
+                  requestId: req_123456
+                  timestamp: 2025-01-15T10:30:00.000Z
+                  executionTimeMs: 5
         "404":
           description: Not Found - Resource does not exist
           content:
