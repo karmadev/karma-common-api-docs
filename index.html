@@ -440,33 +440,32 @@
       const loading = document.getElementById('loading');
       if (loading) loading.remove();
 
-      // Create mount point for Scalar
+      // Create and inject Scalar
       const container = document.querySelector('.api-reference-container');
-      const mountEl = document.createElement('div');
-      mountEl.id = 'api-reference';
-      container.appendChild(mountEl);
+
+      const script = document.createElement('script');
+      script.id = 'api-reference';
+      script.dataset.url = specUrl;
+      script.dataset.configuration = JSON.stringify({
+        theme: 'kepler',
+        layout: 'modern',
+        showSidebar: true,
+        hideModels: false,
+        hideDownloadButton: false,
+        hiddenClients: [],
+        defaultHttpClient: {
+          targetKey: 'javascript',
+          clientKey: 'fetch',
+        },
+        metaData: {
+          title: 'Karma Common API',
+          description: 'RESTful API for the Karma platform',
+        },
+      });
+      container.appendChild(script);
 
       const scalarScript = document.createElement('script');
-      scalarScript.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
-      scalarScript.onload = function() {
-        Scalar.createApiReference('#api-reference', {
-          url: specUrl,
-          theme: 'kepler',
-          layout: 'modern',
-          showSidebar: true,
-          hideModels: false,
-          hideDownloadButton: false,
-          hiddenClients: [],
-          defaultHttpClient: {
-            targetKey: 'javascript',
-            clientKey: 'fetch',
-          },
-          metaData: {
-            title: 'Karma Common API',
-            description: 'RESTful API for the Karma platform',
-          },
-        });
-      };
+      scalarScript.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.25.68';
       document.body.appendChild(scalarScript);
     }
 
