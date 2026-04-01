@@ -3,519 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Karma Common API Documentation</title>
-  <meta name="description" content="API documentation for the Karma Common API - RESTful access to inventory, orders, tabs, locations, and more.">
+  <title>Karma API Documentation</title>
+  <meta name="description" content="API documentation for the Karma platform">
   <link rel="icon" href="https://karma.life/favicon.ico">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-    .version-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 48px;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      z-index: 1000;
-      border-bottom: 1px solid #0f3460;
-    }
-    .version-bar .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: #fff;
-      font-weight: 600;
-      font-size: 15px;
-    }
-    .version-bar .logo svg {
-      width: 22px;
-      height: 22px;
-    }
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-    .nav-links a {
-      color: #a0a0a0;
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover {
-      color: #e94560;
-    }
-    .nav-links a.active {
-      color: #fff;
-    }
+    body { margin: 0; padding: 0; }
     .version-selector {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .version-selector label {
-      color: #a0a0a0;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: #1a1a2e;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
     }
     .version-selector select {
-      background: #0f3460;
+      background: #16213e;
       color: #fff;
-      border: 1px solid #1a4a7a;
-      padding: 6px 12px;
+      border: 1px solid #0f3460;
+      padding: 4px 8px;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 13px;
-      outline: none;
     }
-    .version-selector select:hover {
-      border-color: #e94560;
-    }
-    .version-selector select:focus {
-      border-color: #e94560;
-      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.2);
-    }
-    .api-reference-container {
-      padding-top: 48px;
-    }
-    .loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: calc(100vh - 48px);
-      color: #666;
-    }
-    .loading::after {
-      content: '';
-      width: 24px;
-      height: 24px;
-      border: 2px solid #e94560;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-left: 12px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Examples page styles */
-    .examples-page {
-      padding-top: 48px;
-      max-width: 900px;
-      margin: 0 auto;
-      padding-left: 24px;
-      padding-right: 24px;
-      padding-bottom: 60px;
-    }
-    .examples-page h1 {
-      font-size: 32px;
-      margin-top: 40px;
-      margin-bottom: 16px;
-      color: #1a1a2e;
-    }
-    .examples-page .intro {
-      font-size: 18px;
-      color: #555;
-      line-height: 1.6;
-      margin-bottom: 40px;
-    }
-    .example-cards {
-      display: grid;
-      gap: 24px;
-    }
-    .example-card {
-      background: #fff;
-      border: 1px solid #e0e0e0;
-      border-radius: 12px;
-      padding: 24px;
-      transition: all 0.2s;
-      text-decoration: none;
-      color: inherit;
-    }
-    .example-card:hover {
-      border-color: #e94560;
-      box-shadow: 0 4px 12px rgba(233, 69, 96, 0.1);
-      transform: translateY(-2px);
-    }
-    .example-card h2 {
-      font-size: 20px;
-      color: #1a1a2e;
-      margin-bottom: 8px;
-    }
-    .example-card p {
-      color: #666;
-      line-height: 1.5;
-      margin-bottom: 16px;
-    }
-    .example-card .tags {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .example-card .tag {
-      background: #f0f0f0;
-      color: #555;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    .hidden {
-      display: none !important;
-    }
-
-    /* Architecture page styles */
-    .architecture-page {
-      padding-top: 48px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .architecture-frame {
-      flex: 1;
-      border: none;
-      width: 100%;
-    }
-
-    /* Data Models page styles */
-    .models-page {
-      padding-top: 48px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .models-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 20px;
-      background: #f8f8fa;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    .models-toolbar-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .models-toolbar h2 {
-      font-size: 16px;
-      color: #1a1a2e;
-      font-weight: 600;
-    }
-    .model-selector {
-      background: #fff;
-      border: 1px solid #d0d0d0;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #333;
-      cursor: pointer;
-      outline: none;
-      min-width: 180px;
-    }
-    .model-selector:hover {
-      border-color: #e94560;
-    }
-    .model-selector:focus {
-      border-color: #e94560;
-      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.15);
-    }
-    .models-toolbar-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .model-hint {
-      font-size: 12px;
-      color: #999;
-    }
-    .model-frame {
-      flex: 1;
-      border: none;
-      width: 100%;
+    .version-selector label {
+      color: #e94560;
+      margin-right: 8px;
     }
   </style>
 </head>
 <body>
-  <div class="version-bar">
-    <div class="logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-        <path d="M2 17l10 5 10-5"/>
-        <path d="M2 12l10 5 10-5"/>
-      </svg>
-      Karma Common API
-    </div>
-    <div class="nav-links">
-      <a href="?" id="nav-docs" class="active">API Reference</a>
-      <a href="?page=examples" id="nav-examples">Examples</a>
-      <a href="?page=models" id="nav-models">Data Models</a>
-      <a href="?page=architecture" id="nav-architecture" style="display:none">Architecture</a>
-    </div>
-    <div class="version-selector">
-      <label for="version">Version:</label>
-      <select id="version" onchange="switchVersion(this.value)">
-        <option value="latest">Latest</option>
-      </select>
-    </div>
+  <div class="version-selector">
+    <label for="version">API Version:</label>
+    <select id="version" onchange="switchVersion(this.value)">
+      <option value="latest">Latest</option>
+    </select>
   </div>
 
-  <div class="api-reference-container" id="api-container">
-    <div id="loading" class="loading">Loading API documentation</div>
-  </div>
-
-  <div class="examples-page hidden" id="examples-container">
-    <h1>Implementation Examples</h1>
-    <p class="intro">
-      Learn how to integrate with the Karma Common API through these practical examples.
-      Each guide includes full code samples in TypeScript and cURL commands.
-    </p>
-
-    <div class="example-cards">
-      <a href="examples/nightly-sales-data.md" class="example-card" onclick="viewMarkdown(event, 'examples/nightly-sales-data.md')">
-        <h2>Fetching Nightly Sales Data</h2>
-        <p>
-          Build an automated nightly sales report that fetches purchase data, handles pagination,
-          and aggregates sales by hour and product. Perfect for accounting integrations.
-        </p>
-        <div class="tags">
-          <span class="tag">Purchases API</span>
-          <span class="tag">Pagination</span>
-          <span class="tag">Reporting</span>
-        </div>
-      </a>
-
-      <a href="examples/inventory-sync.md" class="example-card" onclick="viewMarkdown(event, 'examples/inventory-sync.md')">
-        <h2>Pushing and Pulling Inventory</h2>
-        <p>
-          Sync inventory between your system and Karma. Learn how to fetch items,
-          update prices and availability, and handle variants. Includes two-way sync example.
-        </p>
-        <div class="tags">
-          <span class="tag">Inventory API</span>
-          <span class="tag">Variant Groups</span>
-          <span class="tag">POS Integration</span>
-        </div>
-      </a>
-
-      <a href="examples/realtime-webhooks.md" class="example-card" onclick="viewMarkdown(event, 'examples/realtime-webhooks.md')">
-        <h2>Real-time Sales via Webhooks</h2>
-        <p>
-          Receive instant notifications when orders are placed and payments complete.
-          Includes signature verification, event handling, and integration patterns.
-        </p>
-        <div class="tags">
-          <span class="tag">Webhooks</span>
-          <span class="tag">Real-time</span>
-          <span class="tag">Event Handling</span>
-        </div>
-      </a>
-    </div>
-  </div>
-
-  <div class="models-page hidden" id="models-container">
-    <div class="models-toolbar">
-      <div class="models-toolbar-left">
-        <h2>Data Models</h2>
-        <select class="model-selector" id="model-selector" onchange="switchModel(this.value)">
-          <option value="inventory">Inventory</option>
-        </select>
-      </div>
-      <div class="models-toolbar-right">
-        <span class="model-hint">Scroll to zoom &middot; Drag to pan &middot; Click headers to expand</span>
-      </div>
-    </div>
-    <iframe class="model-frame" id="model-frame" src="models/inventory.html"></iframe>
-  </div>
-
-  <div class="architecture-page hidden" id="architecture-container">
-    <iframe class="architecture-frame" id="architecture-frame" src="about:blank"></iframe>
-  </div>
+  <script id="api-reference" data-url="./latest/openapi.json"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 
   <script>
-    // Configuration
-    const BASE_URL = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
-
-    // Get page from URL
-    function getCurrentPage() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('page') || 'docs';
-    }
-
-    // Get version from URL or default to latest
-    function getCurrentVersion() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('version') || 'latest';
-    }
-
-    // Switch to a different version
-    function switchVersion(version) {
-      const url = new URL(window.location.href);
-      if (version === 'latest') {
-        url.searchParams.delete('version');
-      } else {
-        url.searchParams.set('version', version);
-      }
-      window.location.href = url.toString();
-    }
-
-    // View markdown file (opens in new tab for now)
-    function viewMarkdown(event, path) {
-      // For GitHub Pages, markdown files open as raw
-      // In the future, we could render them inline
-    }
-
-    // Switch data model in iframe
-    function switchModel(modelId) {
-      const frame = document.getElementById('model-frame');
-      frame.src = `models/${modelId}.html`;
-      // Update URL without reload
-      const url = new URL(window.location.href);
-      url.searchParams.set('model', modelId);
-      history.replaceState(null, '', url.toString());
-    }
-
-    // Load version manifest and populate dropdown
-    async function loadVersions() {
-      try {
-        const response = await fetch(`${BASE_URL}/versions/manifest.json`);
-        if (!response.ok) throw new Error('Manifest not found');
-
-        const manifest = await response.json();
+    // Load available versions
+    fetch('./versions/manifest.json')
+      .then(r => r.json())
+      .then(manifest => {
         const select = document.getElementById('version');
-        const currentVersion = getCurrentVersion();
+        manifest.versions.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          if (v === manifest.latest) opt.textContent += ' (latest)';
+          select.appendChild(opt);
+        });
+      })
+      .catch(() => console.log('Version manifest not found'));
 
-        // Clear existing options except "Latest"
-        select.innerHTML = '<option value="latest">Latest (' + manifest.latest + ')</option>';
-
-        // Add version options
-        if (manifest.versions && manifest.versions.length > 0) {
-          const versions = [...manifest.versions].sort().reverse();
-          versions.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = v;
-            if (v === currentVersion) opt.selected = true;
-            select.appendChild(opt);
-          });
-        }
-
-        // Select current version
-        if (currentVersion !== 'latest') {
-          select.value = currentVersion;
-        }
-      } catch (e) {
-        console.log('Version manifest not available yet');
-      }
+    function switchVersion(version) {
+      const path = version === 'latest' ? 'latest' : `versions/${version}`;
+      window.location.href = `?spec=${path}/openapi.json`;
     }
 
-    // Get the spec URL for the current version
-    function getSpecUrl() {
-      const version = getCurrentVersion();
-      if (version === 'latest') {
-        return `${BASE_URL}/latest/openapi.json`;
-      }
-      return `${BASE_URL}/versions/${version}/openapi.json`;
+    // Handle version from URL
+    const params = new URLSearchParams(window.location.search);
+    const specUrl = params.get('spec');
+    if (specUrl) {
+      document.getElementById('api-reference').dataset.url = specUrl;
     }
-
-    // Initialize Scalar
-    async function initScalar() {
-      const specUrl = getSpecUrl();
-
-      // Remove loading indicator
-      const loading = document.getElementById('loading');
-      if (loading) loading.remove();
-
-      // Create and inject Scalar
-      const container = document.querySelector('.api-reference-container');
-
-      const script = document.createElement('script');
-      script.id = 'api-reference';
-      script.dataset.url = specUrl;
-      script.dataset.configuration = JSON.stringify({
-        theme: 'kepler',
-        layout: 'modern',
-        showSidebar: true,
-        hideModels: false,
-        hideDownloadButton: false,
-        hiddenClients: [],
-        defaultHttpClient: {
-          targetKey: 'javascript',
-          clientKey: 'fetch',
-        },
-        metaData: {
-          title: 'Karma Common API',
-          description: 'RESTful API for the Karma platform',
-        },
-      });
-      container.appendChild(script);
-
-      const scalarScript = document.createElement('script');
-      scalarScript.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.25.68';
-      document.body.appendChild(scalarScript);
-    }
-
-    // Route to correct page
-    function initPage() {
-      const page = getCurrentPage();
-      const apiContainer = document.getElementById('api-container');
-      const examplesContainer = document.getElementById('examples-container');
-      const modelsContainer = document.getElementById('models-container');
-      const architectureContainer = document.getElementById('architecture-container');
-      const navDocs = document.getElementById('nav-docs');
-      const navExamples = document.getElementById('nav-examples');
-      const navModels = document.getElementById('nav-models');
-      const navArchitecture = document.getElementById('nav-architecture');
-
-      // Hide all pages
-      apiContainer.classList.add('hidden');
-      examplesContainer.classList.add('hidden');
-      modelsContainer.classList.add('hidden');
-      architectureContainer.classList.add('hidden');
-      navDocs.classList.remove('active');
-      navExamples.classList.remove('active');
-      navModels.classList.remove('active');
-      navArchitecture.classList.remove('active');
-
-      if (page === 'examples') {
-        examplesContainer.classList.remove('hidden');
-        navExamples.classList.add('active');
-      } else if (page === 'models') {
-        modelsContainer.classList.remove('hidden');
-        navModels.classList.add('active');
-        // Load model from URL param or default to inventory
-        const params = new URLSearchParams(window.location.search);
-        const model = params.get('model') || 'inventory';
-        document.getElementById('model-selector').value = model;
-        document.getElementById('model-frame').src = `models/${model}.html`;
-      } else if (page === 'architecture') {
-        architectureContainer.classList.remove('hidden');
-        navArchitecture.classList.add('active');
-        document.getElementById('architecture-frame').src = 'architecture.html';
-      } else {
-        apiContainer.classList.remove('hidden');
-        navDocs.classList.add('active');
-        initScalar();
-      }
-    }
-
-    // Initialize
-    loadVersions();
-    initPage();
   </script>
 </body>
 </html>

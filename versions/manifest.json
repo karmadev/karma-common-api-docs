@@ -1,8 +1,7 @@
 {
-  "latest": "20260131-1317-1",
-  "latestMajor": "v1",
-  "versions": ["v1"],
-  "updatedAt": "2026-02-11T14:54:49.772Z",
-  "sourceCommit": "54234e40f2a2168988d5241389947e7ac4fa4ca2",
-  "sourceRepo": "karmadev/karma-common-api"
+  "latest": "v20260131-1317-1",
+  "latestMajor": "v20260131-1317-1",
+  "versions": ["v1","v20260131-1317-1"],
+  "updatedAt": "2026-04-01T21:54:49Z",
+  "sourceCommit": "a294f566aba93bf5cbf812e3e1ac17ed40f4ecfa"
 }
