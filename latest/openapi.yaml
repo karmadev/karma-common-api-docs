@@ -235,6 +235,64 @@ paths:
       responses:
         "200":
           description: Default Response
+  /api/v1/print-jobs/terminal-pre-check:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - locationId
+                - tabId
+                - terminalId
+                - content
+              properties:
+                locationId:
+                  type: number
+                tabId:
+                  type: string
+                  format: uuid
+                terminalId:
+                  type: string
+                  format: uuid
+                content:
+                  type: object
+                  required:
+                    - tableName
+                    - totalAmount
+                    - lineItems
+                  properties:
+                    tableName:
+                      type: string
+                    totalAmount:
+                      type: number
+                    lineItems:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - name
+                          - price
+                          - modifications
+                        properties:
+                          name:
+                            type: string
+                          price:
+                            type: number
+                          modifications:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                price:
+                                  type: number
+        required: true
+      responses:
+        "200":
+          description: Default Response
   /api/v1/purchases/refund-reasons:
     get:
       parameters:
@@ -14105,6 +14163,14 @@ paths:
           name: partySize
           required: true
           description: Number of guests
+        - schema:
+            type: string
+            format: uuid
+          in: query
+          name: bookingGroupId
+          required: false
+          description: Optional booking group ID to filter availability by group schedule,
+            table pool, and settings
         - schema:
             type: number
           in: path
