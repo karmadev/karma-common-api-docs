@@ -383,6 +383,51 @@
         }
       }
     },
+    "/api/v1/tabs/close-all": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/terminals/{id}": {
+      "put": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/v1/alerts": {
       "get": {
         "summary": "List alerts",
@@ -17767,221 +17812,203 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "booking": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string",
-                              "format": "uuid",
-                              "description": "Unique booking ID"
-                            },
-                            "locationId": {
-                              "type": "number",
-                              "description": "Location ID"
-                            },
-                            "tableId": {
-                              "type": "string",
-                              "format": "uuid",
-                              "nullable": true,
-                              "description": "Table/resource ID (QR code UUID)"
-                            },
-                            "bookingDate": {
-                              "type": "string",
-                              "format": "date",
-                              "description": "Date of the booking (YYYY-MM-DD)"
-                            },
-                            "startTime": {
-                              "type": "string",
-                              "description": "Start time (HH:MM:SS)"
-                            },
-                            "endTime": {
-                              "type": "string",
-                              "description": "End time (HH:MM:SS)"
-                            },
-                            "timezone": {
-                              "type": "string",
-                              "description": "Timezone for the booking"
-                            },
-                            "primaryUserId": {
-                              "type": [
-                                "null",
-                                "number"
-                              ],
-                              "description": "Primary guest user ID (null for walk-ins)"
-                            },
-                            "guestCount": {
-                              "type": "number",
-                              "minimum": 1,
-                              "description": "Number of guests"
-                            },
-                            "occasion": {
-                              "type": "string",
-                              "enum": [
-                                "none",
-                                "birthday",
-                                "anniversary",
-                                "business",
-                                "date",
-                                "celebration",
-                                "other"
-                              ],
-                              "description": "Occasion for the booking"
-                            },
-                            "specialRequests": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Guest special requests"
-                            },
-                            "internalNotes": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Staff-only notes"
-                            },
-                            "status": {
-                              "type": "string",
-                              "enum": [
-                                "pending",
-                                "confirmed",
-                                "checked_in",
-                                "seated",
-                                "completed",
-                                "cancelled",
-                                "no_show"
-                              ],
-                              "description": "Booking status"
-                            },
-                            "paymentType": {
-                              "type": "string",
-                              "enum": [
-                                "none",
-                                "deposit",
-                                "full_prepayment"
-                              ],
-                              "description": "Payment type required for booking"
-                            },
-                            "depositAmountCents": {
-                              "type": "number",
-                              "nullable": true,
-                              "description": "Deposit amount in cents"
-                            },
-                            "purchaseId": {
-                              "type": "number",
-                              "nullable": true,
-                              "description": "Linked purchase ID"
-                            },
-                            "confirmationCode": {
-                              "type": "string",
-                              "description": "Unique confirmation code for guest"
-                            },
-                            "bookingSource": {
-                              "type": "string",
-                              "enum": [
-                                "direct",
-                                "website",
-                                "phone",
-                                "walkin",
-                                "third_party"
-                              ],
-                              "description": "Source of the booking"
-                            },
-                            "estimatedRevenueCents": {
-                              "type": "number",
-                              "nullable": true,
-                              "description": "AI-estimated revenue"
-                            },
-                            "guestName": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Guest contact name"
-                            },
-                            "guestEmail": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Guest contact email"
-                            },
-                            "guestPhone": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Guest contact phone"
-                            },
-                            "createdAt": {
-                              "type": "string",
-                              "format": "date-time",
-                              "description": "Creation timestamp"
-                            },
-                            "updatedAt": {
-                              "type": "string",
-                              "format": "date-time",
-                              "description": "Last update timestamp"
-                            },
-                            "confirmedAt": {
-                              "type": "string",
-                              "format": "date-time",
-                              "nullable": true,
-                              "description": "Confirmation timestamp"
-                            },
-                            "seatedAt": {
-                              "type": "string",
-                              "format": "date-time",
-                              "nullable": true,
-                              "description": "Seated timestamp"
-                            },
-                            "completedAt": {
-                              "type": "string",
-                              "format": "date-time",
-                              "nullable": true,
-                              "description": "Completion timestamp"
-                            },
-                            "cancelledAt": {
-                              "type": "string",
-                              "format": "date-time",
-                              "nullable": true,
-                              "description": "Cancellation timestamp"
-                            },
-                            "tabId": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "UUID of the linked tab (if any)"
-                            },
-                            "userName": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Primary guest name"
-                            },
-                            "userEmail": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Primary guest email"
-                            },
-                            "userPhone": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Primary guest phone"
-                            },
-                            "tableName": {
-                              "type": "string",
-                              "nullable": true,
-                              "description": "Table name"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "locationId",
-                            "bookingDate",
-                            "startTime",
-                            "endTime",
-                            "timezone",
-                            "guestCount",
-                            "status",
-                            "confirmationCode",
-                            "createdAt",
-                            "updatedAt"
-                          ]
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Unique booking ID"
+                        },
+                        "locationId": {
+                          "type": "number",
+                          "description": "Location ID"
+                        },
+                        "tableId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true,
+                          "description": "Table/resource ID (QR code UUID)"
+                        },
+                        "bookingDate": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "Date of the booking (YYYY-MM-DD)"
+                        },
+                        "startTime": {
+                          "type": "string",
+                          "description": "Start time (HH:MM:SS)"
+                        },
+                        "endTime": {
+                          "type": "string",
+                          "description": "End time (HH:MM:SS)"
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "description": "Timezone for the booking"
+                        },
+                        "primaryUserId": {
+                          "type": [
+                            "null",
+                            "number"
+                          ],
+                          "description": "Primary guest user ID (null for walk-ins)"
+                        },
+                        "guestCount": {
+                          "type": "number",
+                          "minimum": 1,
+                          "description": "Number of guests"
+                        },
+                        "occasion": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "birthday",
+                            "anniversary",
+                            "business",
+                            "date",
+                            "celebration",
+                            "other"
+                          ],
+                          "description": "Occasion for the booking"
+                        },
+                        "specialRequests": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Guest special requests"
+                        },
+                        "internalNotes": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Staff-only notes"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "confirmed",
+                            "checked_in",
+                            "seated",
+                            "completed",
+                            "cancelled",
+                            "no_show"
+                          ],
+                          "description": "Booking status"
+                        },
+                        "paymentType": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "deposit",
+                            "full_prepayment"
+                          ],
+                          "description": "Payment type required for booking"
+                        },
+                        "depositAmountCents": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Deposit amount in cents"
+                        },
+                        "purchaseId": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Linked purchase ID"
+                        },
+                        "confirmationCode": {
+                          "type": "string",
+                          "description": "Unique confirmation code for guest"
+                        },
+                        "bookingSource": {
+                          "type": "string",
+                          "enum": [
+                            "direct",
+                            "website",
+                            "phone",
+                            "walkin",
+                            "third_party"
+                          ],
+                          "description": "Source of the booking"
+                        },
+                        "estimatedRevenueCents": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "AI-estimated revenue"
+                        },
+                        "guestName": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Guest contact name"
+                        },
+                        "guestEmail": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Guest contact email"
+                        },
+                        "guestPhone": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Guest contact phone"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Creation timestamp"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        },
+                        "confirmedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Confirmation timestamp"
+                        },
+                        "seatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Seated timestamp"
+                        },
+                        "completedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Completion timestamp"
+                        },
+                        "cancelledAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Cancellation timestamp"
+                        },
+                        "tabId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "UUID of the linked tab (if any)"
+                        },
+                        "userName": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Primary guest name"
+                        },
+                        "userEmail": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Primary guest email"
+                        },
+                        "userPhone": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Primary guest phone"
+                        },
+                        "tableName": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Table name"
                         },
                         "tab": {
                           "type": "object",
                           "nullable": true,
-                          "description": "Created tab information (only present if createTab was true)",
+                          "description": "Linked tab information (present when booking has a pre_arrival or active tab)",
                           "properties": {
                             "id": {
                               "type": "string",
@@ -17991,14 +18018,12 @@
                             "tabMemberId": {
                               "type": "string",
                               "format": "uuid",
+                              "nullable": true,
                               "description": "Tab member UUID for the primary guest"
                             }
                           }
                         }
-                      },
-                      "required": [
-                        "booking"
-                      ]
+                      }
                     },
                     "meta": {
                       "type": "object",
@@ -122799,6 +122824,560 @@
         }
       }
     },
+    "/api/v1/print-jobs/refund-receipt": {
+      "post": {
+        "tags": [
+          "Printers"
+        ],
+        "description": "Create a refund receipt print job.\n\nThis endpoint prints a refund receipt for a completed purchase refund. Used from the merchant dashboard when staff want to print a physical refund receipt.\n\n**Flow:**\n1. Validates printer group belongs to location\n2. Sends refund receipt print job to printer service via Pub/Sub\n3. Printer service fetches refund data and renders the receipt\n4. Returns correlation ID for tracking",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "printerGroupId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the printer group to print to"
+                  },
+                  "purchaseRefundId": {
+                    "type": "string",
+                    "description": "ID of the purchase refund to print receipt for"
+                  }
+                },
+                "required": [
+                  "printerGroupId",
+                  "purchaseRefundId"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Refund receipt print job created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Refund receipt print job created successfully",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "correlationId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Unique correlation ID for tracking the print job"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "refund_receipt"
+                          ]
+                        },
+                        "printerGroupId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the printer group the job was sent to"
+                        },
+                        "purchaseRefundId": {
+                          "type": "string",
+                          "description": "ID of the purchase refund"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "type",
+                        "printerGroupId",
+                        "purchaseRefundId"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_INPUT",
+                    "message": "Invalid request parameters"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 5
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_API_KEY",
+                    "message": "Invalid API key provided"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 3
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INSUFFICIENT_PERMISSIONS",
+                    "message": "You do not have permission to access this resource"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 4
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Resource does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RESOURCE_NOT_FOUND",
+                    "message": "The requested resource was not found"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 2
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Rate limit exceeded. Please try again later."
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 1
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "An unexpected error occurred"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/print-jobs/terminal-receipt": {
       "post": {
         "tags": [
@@ -199938,6 +200517,13 @@
             }
           }
         }
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
       }
     },
     "/api/v1/terminals/statuses": {
@@ -213873,6 +214459,582 @@
                       ]
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_INPUT",
+                    "message": "Invalid request parameters"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 5
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_API_KEY",
+                    "message": "Invalid API key provided"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 3
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INSUFFICIENT_PERMISSIONS",
+                    "message": "You do not have permission to access this resource"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 4
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Resource does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RESOURCE_NOT_FOUND",
+                    "message": "The requested resource was not found"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 2
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Rate limit exceeded. Please try again later."
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 1
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "An unexpected error occurred"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/subscriptions/{id}/stats": {
+      "get": {
+        "summary": "Get webhook subscription stats",
+        "tags": [
+          "Webhooks"
+        ],
+        "description": "Get delivery statistics for a webhook subscription\n\n**Permissions:** 🔵 `webhooks.read`",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Webhook subscription ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "totalDeliveries": {
+                          "type": "number",
+                          "description": "Total number of deliveries"
+                        },
+                        "successCount": {
+                          "type": "number",
+                          "description": "Number of successful deliveries"
+                        },
+                        "failedCount": {
+                          "type": "number",
+                          "description": "Number of failed deliveries"
+                        },
+                        "retryingCount": {
+                          "type": "number",
+                          "description": "Number of deliveries currently retrying"
+                        },
+                        "successRate": {
+                          "type": "number",
+                          "description": "Success rate percentage"
+                        },
+                        "dailyStats": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "date": {
+                                "type": "string",
+                                "format": "date",
+                                "description": "Date (YYYY-MM-DD)"
+                              },
+                              "success": {
+                                "type": "number",
+                                "description": "Successful deliveries on this date"
+                              },
+                              "failed": {
+                                "type": "number",
+                                "description": "Failed deliveries on this date"
+                              }
+                            },
+                            "required": [
+                              "date",
+                              "success",
+                              "failed"
+                            ]
+                          },
+                          "description": "Daily delivery stats for the last 30 days"
+                        },
+                        "lastDeliveredAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Last successful delivery timestamp"
+                        }
+                      },
+                      "required": [
+                        "totalDeliveries",
+                        "successCount",
+                        "failedCount",
+                        "retryingCount",
+                        "successRate",
+                        "dailyStats",
+                        "lastDeliveredAt"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "meta"
+                  ]
                 }
               }
             }
