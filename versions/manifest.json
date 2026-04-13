@@ -1,7 +1,7 @@
 {
   "latest": "v20260131-1317-1",
-  "latestMajor": "v1",
-  "versions": ["v1", "v20260131-1317-1"],
-  "updatedAt": "2026-04-10T13:11:15Z",
-  "sourceCommit": "eb07ada88987b78b3914693e1d2b156adc2fdc57"
+  "latestMajor": "v20260131",
+  "versions": ["v1", "v20260131", "v20260131-1317-1"],
+  "updatedAt": "2026-04-13T14:44:00Z",
+  "sourceCommit": "a7c84e861db7cd53c6bd306fdc3215c1f919766f"
 }
