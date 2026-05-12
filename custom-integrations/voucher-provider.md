@@ -87,7 +87,7 @@ Validate a voucher code against the current cart and reserve its value. Karma ca
 
 - `ok` (boolean, required) — must be `true` on success.
 - `voucherNr` (string, required) — the voucher identifier in your system. May equal the input `code` or be a canonicalized form (uppercased, whitespace-trimmed, etc.). Karma stores this as the reservation's voucher number.
-- `discountAmountCents` (integer, required) — how much Karma should discount the cart, in cents. Karma caps this at `cart.totalCents` internally, so returning a value larger than the cart total is safe — the guest will simply get a full discount on this cart.
+- `discountAmountCents` (integer, required) — how much Karma should discount the cart, in cents. Return a value no greater than `cart.totalCents`; the responsibility for keeping the discount within the cart total sits with your endpoint.
 - `expiresAt` (ISO 8601 string, optional) — when this reservation expires. If omitted, Karma applies a 2-hour default. Use this if your voucher rules require a tighter window.
 - `providerRef` (string, optional) — an opaque string Karma will echo back on commit and reactivate. Use it to correlate the commit request to your internal record (e.g. a row ID, a claim token, an offer instance). Karma never inspects this value.
 
@@ -122,7 +122,7 @@ Consume a previously reserved voucher. Karma calls this after the guest has succ
 **Fields:**
 
 - `providerRef` (string, optional) — the value you returned from the check response (if any). Echoed back so you can look up the original reservation by your own identifier.
-- `amountCents` (integer, required) — Karma's reserved amount. Always equals the `discountAmountCents` you returned from check, capped at the cart total. Use this value to confirm the amount you expected matches what Karma applied.
+- `amountCents` (integer, required) — the reserved amount Karma is committing. Equals the `discountAmountCents` you returned from the check call. Use this value to confirm the amount you expected matches what Karma applied.
 - `transactionId` (string, required) — a Karma-generated reservation identifier. **Your endpoint MUST dedupe by this value.** See "Idempotency & Retries" below.
 
 **Success response (HTTP 200):**
@@ -163,7 +163,7 @@ Release a previously reserved voucher. Karma calls this when the guest cancels p
 
 ---
 
-**All prices are in cents (integer). Never return fractional values.** Karma stores all money as integer cents to avoid floating-point rounding errors. If your internal system uses major-unit currency values, convert on the boundary: multiply by 100 on the way in, divide by 100 for display only. Never emit a fractional `discountAmountCents` or `amountCents` — Karma will reject the response.
+**All prices are in cents (integer). Never return fractional values.** Karma stores all money as integer cents to avoid floating-point rounding errors. If your internal system uses major-unit currency values, convert on the boundary: multiply by 100 on the way in, divide by 100 for display only. Always emit integer values for `discountAmountCents` and `amountCents`; fractional values produce undefined behavior downstream.
 
 ## Error Codes
 
@@ -185,9 +185,9 @@ Karma surfaces these codes directly to the guest-facing checkout UI — choose t
 
 ### HTTPS is required
 
-Every URL you give Karma must begin with `https://`. Plain `http://` URLs are rejected by Karma's SSRF guard at configuration time and at each outbound request. No exceptions. If you need to test from a development machine, use a TLS-terminating tunnel such as `ngrok` or Cloudflare Tunnel.
+Every URL you give Karma must begin with `https://`. Plain `http://` URLs are rejected by Karma's SSRF guard at request time. No exceptions. If you need to test from a development machine, use a TLS-terminating tunnel such as `ngrok` or Cloudflare Tunnel.
 
-Karma also blocks URLs that resolve to private or loopback addresses (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fe80::/10`). Your endpoints must be reachable from the public internet.
+Karma also blocks URLs that resolve to private or loopback addresses (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fe80::/10`, plus IPv4-mapped IPv6 forms of any of the above). Your endpoints must be reachable from the public internet.
 
 ### Supported auth modes
 
@@ -223,7 +223,7 @@ Karma automatically retries a request when it encounters:
 
 - **HTTP 5xx responses** (500, 502, 503, 504, etc.) — treated as transient server-side failures.
 - **Timeouts** — any request that does not receive a response within **5 seconds**.
-- **Network errors** — `ECONNREFUSED`, `ECONNRESET`, `ENOTFOUND`, `ECONNABORTED`, DNS failure.
+- **Network errors** — `ECONNREFUSED`, `ECONNRESET`, `ENOTFOUND`, `ECONNABORTED`.
 
 ### When Karma does NOT retry
 

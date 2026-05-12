@@ -4,8 +4,6 @@
 
 If your restaurant runs its own loyalty program, Karma can forward member identification, point accrual, and reward redemption to your URLs instead of Karma's native loyalty system. This document is everything a backend engineer needs to implement the six HTTP endpoints Karma will call.
 
-> **Status: forward-looking spec.** The custom loyalty provider is contracted in the codebase (`LoyaltyProvider` interface in `karma-common-api`) but no `custom` implementation has shipped yet. This document is the contract Karma will commit to before implementation lands. If you build against this spec today, the endpoint URLs and request/response shapes will not change — only the configuration UI in Karma is still being added.
-
 ## Overview
 
 When a location is configured with the `custom` loyalty provider, Karma stops awarding and redeeming points against its own database and instead calls six HTTPS endpoints that you host. Every loyalty operation a guest or merchant triggers — looking up a member at the till, awarding points after a purchase, redeeming a reward at checkout — becomes an outbound request from Karma to your service.
@@ -78,7 +76,7 @@ Resolve a member by their identifier. Karma calls this when a guest presents a l
 - `memberId` (string, required) — your stable identifier for this member. Karma stores this and uses it in all subsequent requests for the same guest. Treat as opaque on Karma's side; you choose the format and length (max 100 chars).
 - `userId` (integer, optional) — the Karma user ID, if you have already linked this member to one. Karma uses this to keep its records in sync; omit if the member is anonymous in your system.
 
-**Error response (HTTP 200 or 4xx):**
+**Error response (HTTP 200):**
 
 ```json
 {
@@ -90,7 +88,7 @@ Resolve a member by their identifier. Karma calls this when a guest presents a l
 }
 ```
 
-You may return the error body with either HTTP 200 or an appropriate 4xx status code (400, 404, 409, 422) — Karma inspects the JSON body regardless. Karma will **not** retry on 4xx responses; the error is treated as a definitive rejection. See "Error Codes" below for the allowed `code` values.
+Always return errors as HTTP 200 with `ok: false` so Karma can inspect the body and surface a precise `code` to the UI. A 4xx status causes Karma to drop the body and report a generic `PROVIDER_ERROR` instead. See "Error Codes" below for the allowed `code` values.
 
 ### POST {enrollUrl}
 
@@ -320,7 +318,7 @@ Spend points on a reward. Karma calls this when a guest taps "Redeem" on a rewar
 
 ---
 
-**All prices and points are integers. Never return fractional values.** Karma stores money as integer cents and points as integer counts to avoid floating-point rounding errors. If your internal system uses major-unit currency or fractional points, convert on the boundary: multiply by 100 on the way in for cents, round to the nearest whole number for points. Karma will reject responses that contain fractional values.
+**All prices and points are integers. Never return fractional values.** Karma stores money as integer cents and points as integer counts to avoid floating-point rounding errors. If your internal system uses major-unit currency or fractional points, convert on the boundary: multiply by 100 on the way in for cents, round to the nearest whole number for points. Always emit integer values; fractional values produce undefined behavior downstream.
 
 ## Error Codes
 
