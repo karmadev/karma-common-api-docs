@@ -2476,9 +2476,91 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "variantGroupId",
+                          "name",
+                          "price",
+                          "defaultSelection",
+                          "quantity",
+                          "allowQuantityChange",
+                          "quantityCents"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Variant ID"
+                          },
+                          "variantGroupId": {
+                            "type": "integer",
+                            "description": "Parent variant group ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Variant name"
+                          },
+                          "price": {
+                            "type": "integer",
+                            "description": "Price in cents (null for item-based variants)",
+                            "nullable": true
+                          },
+                          "defaultSelection": {
+                            "type": "boolean",
+                            "description": "Whether this variant is selected by default"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Variant description",
+                            "nullable": true
+                          },
+                          "rank": {
+                            "type": "integer",
+                            "description": "Sort order",
+                            "nullable": true
+                          },
+                          "itemId": {
+                            "type": "integer",
+                            "description": "Reference to inventory item (item-based variants)",
+                            "nullable": true
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "description": "Legacy default quantity (kept for backwards compatibility)"
+                          },
+                          "allowQuantityChange": {
+                            "type": "boolean",
+                            "description": "Whether guests can change quantity"
+                          },
+                          "minQuantity": {
+                            "type": "integer",
+                            "description": "Legacy minimum quantity",
+                            "nullable": true
+                          },
+                          "maxQuantity": {
+                            "type": "integer",
+                            "description": "Legacy maximum quantity",
+                            "nullable": true
+                          },
+                          "quantityCents": {
+                            "type": "integer",
+                            "description": "Default quantity in cents (100 = 1.0)"
+                          },
+                          "minQuantityCents": {
+                            "type": "integer",
+                            "description": "Minimum quantity in cents",
+                            "nullable": true
+                          },
+                          "maxQuantityCents": {
+                            "type": "integer",
+                            "description": "Maximum quantity in cents",
+                            "nullable": true
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -2810,9 +2892,63 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "entityType",
+                          "entityId",
+                          "locationId",
+                          "isActive",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Channel ID",
+                            "format": "uuid"
+                          },
+                          "entityType": {
+                            "type": "string",
+                            "enum": [
+                              "MENU",
+                              "ITEM",
+                              "LOCATION",
+                              "MODIFIER",
+                              "CATEGORY",
+                              "MENU_LAYOUT",
+                              "VARIANT_GROUP"
+                            ],
+                            "description": "Type of entity"
+                          },
+                          "entityId": {
+                            "type": "string",
+                            "description": "ID of the entity this channel applies to"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID (nullable for global entities)",
+                            "nullable": true
+                          },
+                          "isActive": {
+                            "type": "boolean",
+                            "description": "Whether channel is active"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -3168,9 +3304,80 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "entityType",
+                          "entityId",
+                          "locationId",
+                          "isActive",
+                          "priority",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Schedule ID",
+                            "format": "uuid"
+                          },
+                          "entityType": {
+                            "type": "string",
+                            "enum": [
+                              "MENU",
+                              "ITEM",
+                              "LOCATION",
+                              "MODIFIER",
+                              "CATEGORY",
+                              "MENU_LAYOUT",
+                              "VARIANT_GROUP",
+                              "VOUCHER",
+                              "EARNING_RULE",
+                              "BOOKING"
+                            ],
+                            "description": "Type of entity being scheduled"
+                          },
+                          "entityId": {
+                            "type": "string",
+                            "description": "ID of entity being scheduled"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Schedule name",
+                            "nullable": true
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Schedule description",
+                            "nullable": true
+                          },
+                          "isActive": {
+                            "type": "boolean",
+                            "description": "Whether schedule is active"
+                          },
+                          "priority": {
+                            "type": "integer",
+                            "description": "Priority for conflict resolution (higher wins)"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -3594,9 +3801,256 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "bookingDate",
+                          "startTime",
+                          "endTime",
+                          "timezone",
+                          "guestCount",
+                          "notes",
+                          "status",
+                          "confirmationCode",
+                          "resourceLocked",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Booking ID",
+                            "format": "uuid"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "tableId": {
+                            "type": "string",
+                            "description": "Associated table/QR code UUID",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "bookingDate": {
+                            "type": "string",
+                            "description": "Date of booking (YYYY-MM-DD)",
+                            "format": "date"
+                          },
+                          "startTime": {
+                            "type": "string",
+                            "description": "Start time (HH:MM)"
+                          },
+                          "endTime": {
+                            "type": "string",
+                            "description": "End time (HH:MM)"
+                          },
+                          "timezone": {
+                            "type": "string",
+                            "description": "IANA timezone (e.g., \"Europe/Stockholm\")"
+                          },
+                          "primaryUserId": {
+                            "type": "integer",
+                            "description": "ID of primary guest/user",
+                            "nullable": true
+                          },
+                          "guestCount": {
+                            "type": "integer",
+                            "description": "Number of guests"
+                          },
+                          "occasion": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "birthday",
+                              "anniversary",
+                              "business",
+                              "date",
+                              "celebration",
+                              "other"
+                            ],
+                            "description": "Occasion type",
+                            "nullable": true
+                          },
+                          "specialRequests": {
+                            "type": "string",
+                            "description": "Guest special requests/notes",
+                            "nullable": true
+                          },
+                          "internalNotes": {
+                            "type": "string",
+                            "description": "Staff internal notes (legacy single-note field; prefer notes array)",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "uuid",
+                                "note",
+                                "sortOrder",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "uuid": {
+                                  "type": "string",
+                                  "description": "Note UUID",
+                                  "format": "uuid"
+                                },
+                                "note": {
+                                  "type": "string",
+                                  "description": "Note text"
+                                },
+                                "sortOrder": {
+                                  "type": "integer",
+                                  "description": "Display order"
+                                },
+                                "createdByRetailerUserId": {
+                                  "type": "integer",
+                                  "description": "Staff user who created the note",
+                                  "nullable": true
+                                },
+                                "updatedByRetailerUserId": {
+                                  "type": "integer",
+                                  "description": "Staff user who last updated the note",
+                                  "nullable": true
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Note creation timestamp"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Note last update timestamp"
+                                }
+                              }
+                            },
+                            "description": "Notes with metadata"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "confirmed",
+                              "checked_in",
+                              "seated",
+                              "completed",
+                              "cancelled",
+                              "no_show"
+                            ],
+                            "description": "Booking status"
+                          },
+                          "paymentType": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "deposit",
+                              "full_prepayment"
+                            ],
+                            "description": "Payment type",
+                            "nullable": true
+                          },
+                          "depositAmountCents": {
+                            "type": "integer",
+                            "description": "Deposit amount in cents",
+                            "nullable": true
+                          },
+                          "purchaseId": {
+                            "type": "integer",
+                            "description": "Associated purchase/payment ID",
+                            "nullable": true
+                          },
+                          "confirmationCode": {
+                            "type": "string",
+                            "description": "Unique confirmation code (KRM-XXXXXX format)"
+                          },
+                          "bookingSource": {
+                            "type": "string",
+                            "enum": [
+                              "direct",
+                              "website",
+                              "phone",
+                              "walkin",
+                              "third_party"
+                            ],
+                            "description": "Source of booking",
+                            "nullable": true
+                          },
+                          "estimatedRevenueCents": {
+                            "type": "integer",
+                            "description": "Estimated revenue in cents",
+                            "nullable": true
+                          },
+                          "resourceLocked": {
+                            "type": "boolean",
+                            "description": "Whether booking resource is locked"
+                          },
+                          "guestName": {
+                            "type": "string",
+                            "description": "Guest name",
+                            "nullable": true
+                          },
+                          "guestEmail": {
+                            "type": "string",
+                            "description": "Guest email",
+                            "format": "email",
+                            "nullable": true
+                          },
+                          "guestPhone": {
+                            "type": "string",
+                            "description": "Guest phone number",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          },
+                          "confirmedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Confirmation timestamp",
+                            "nullable": true
+                          },
+                          "seatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Seating timestamp",
+                            "nullable": true
+                          },
+                          "completedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Completion timestamp",
+                            "nullable": true
+                          },
+                          "cancelledAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Cancellation timestamp",
+                            "nullable": true
+                          },
+                          "tabId": {
+                            "type": "string",
+                            "description": "Associated tab UUID",
+                            "format": "uuid",
+                            "nullable": true
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -3644,9 +4098,256 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "bookingDate",
+                          "startTime",
+                          "endTime",
+                          "timezone",
+                          "guestCount",
+                          "notes",
+                          "status",
+                          "confirmationCode",
+                          "resourceLocked",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Booking ID",
+                            "format": "uuid"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "tableId": {
+                            "type": "string",
+                            "description": "Associated table/QR code UUID",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "bookingDate": {
+                            "type": "string",
+                            "description": "Date of booking (YYYY-MM-DD)",
+                            "format": "date"
+                          },
+                          "startTime": {
+                            "type": "string",
+                            "description": "Start time (HH:MM)"
+                          },
+                          "endTime": {
+                            "type": "string",
+                            "description": "End time (HH:MM)"
+                          },
+                          "timezone": {
+                            "type": "string",
+                            "description": "IANA timezone (e.g., \"Europe/Stockholm\")"
+                          },
+                          "primaryUserId": {
+                            "type": "integer",
+                            "description": "ID of primary guest/user",
+                            "nullable": true
+                          },
+                          "guestCount": {
+                            "type": "integer",
+                            "description": "Number of guests"
+                          },
+                          "occasion": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "birthday",
+                              "anniversary",
+                              "business",
+                              "date",
+                              "celebration",
+                              "other"
+                            ],
+                            "description": "Occasion type",
+                            "nullable": true
+                          },
+                          "specialRequests": {
+                            "type": "string",
+                            "description": "Guest special requests/notes",
+                            "nullable": true
+                          },
+                          "internalNotes": {
+                            "type": "string",
+                            "description": "Staff internal notes (legacy single-note field; prefer notes array)",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "uuid",
+                                "note",
+                                "sortOrder",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "uuid": {
+                                  "type": "string",
+                                  "description": "Note UUID",
+                                  "format": "uuid"
+                                },
+                                "note": {
+                                  "type": "string",
+                                  "description": "Note text"
+                                },
+                                "sortOrder": {
+                                  "type": "integer",
+                                  "description": "Display order"
+                                },
+                                "createdByRetailerUserId": {
+                                  "type": "integer",
+                                  "description": "Staff user who created the note",
+                                  "nullable": true
+                                },
+                                "updatedByRetailerUserId": {
+                                  "type": "integer",
+                                  "description": "Staff user who last updated the note",
+                                  "nullable": true
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Note creation timestamp"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Note last update timestamp"
+                                }
+                              }
+                            },
+                            "description": "Notes with metadata"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "confirmed",
+                              "checked_in",
+                              "seated",
+                              "completed",
+                              "cancelled",
+                              "no_show"
+                            ],
+                            "description": "Booking status"
+                          },
+                          "paymentType": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "deposit",
+                              "full_prepayment"
+                            ],
+                            "description": "Payment type",
+                            "nullable": true
+                          },
+                          "depositAmountCents": {
+                            "type": "integer",
+                            "description": "Deposit amount in cents",
+                            "nullable": true
+                          },
+                          "purchaseId": {
+                            "type": "integer",
+                            "description": "Associated purchase/payment ID",
+                            "nullable": true
+                          },
+                          "confirmationCode": {
+                            "type": "string",
+                            "description": "Unique confirmation code (KRM-XXXXXX format)"
+                          },
+                          "bookingSource": {
+                            "type": "string",
+                            "enum": [
+                              "direct",
+                              "website",
+                              "phone",
+                              "walkin",
+                              "third_party"
+                            ],
+                            "description": "Source of booking",
+                            "nullable": true
+                          },
+                          "estimatedRevenueCents": {
+                            "type": "integer",
+                            "description": "Estimated revenue in cents",
+                            "nullable": true
+                          },
+                          "resourceLocked": {
+                            "type": "boolean",
+                            "description": "Whether booking resource is locked"
+                          },
+                          "guestName": {
+                            "type": "string",
+                            "description": "Guest name",
+                            "nullable": true
+                          },
+                          "guestEmail": {
+                            "type": "string",
+                            "description": "Guest email",
+                            "format": "email",
+                            "nullable": true
+                          },
+                          "guestPhone": {
+                            "type": "string",
+                            "description": "Guest phone number",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          },
+                          "confirmedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Confirmation timestamp",
+                            "nullable": true
+                          },
+                          "seatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Seating timestamp",
+                            "nullable": true
+                          },
+                          "completedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Completion timestamp",
+                            "nullable": true
+                          },
+                          "cancelledAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Cancellation timestamp",
+                            "nullable": true
+                          },
+                          "tabId": {
+                            "type": "string",
+                            "description": "Associated tab UUID",
+                            "format": "uuid",
+                            "nullable": true
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -3953,9 +4654,256 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "bookingDate",
+                          "startTime",
+                          "endTime",
+                          "timezone",
+                          "guestCount",
+                          "notes",
+                          "status",
+                          "confirmationCode",
+                          "resourceLocked",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Booking ID",
+                            "format": "uuid"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "tableId": {
+                            "type": "string",
+                            "description": "Associated table/QR code UUID",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "bookingDate": {
+                            "type": "string",
+                            "description": "Date of booking (YYYY-MM-DD)",
+                            "format": "date"
+                          },
+                          "startTime": {
+                            "type": "string",
+                            "description": "Start time (HH:MM)"
+                          },
+                          "endTime": {
+                            "type": "string",
+                            "description": "End time (HH:MM)"
+                          },
+                          "timezone": {
+                            "type": "string",
+                            "description": "IANA timezone (e.g., \"Europe/Stockholm\")"
+                          },
+                          "primaryUserId": {
+                            "type": "integer",
+                            "description": "ID of primary guest/user",
+                            "nullable": true
+                          },
+                          "guestCount": {
+                            "type": "integer",
+                            "description": "Number of guests"
+                          },
+                          "occasion": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "birthday",
+                              "anniversary",
+                              "business",
+                              "date",
+                              "celebration",
+                              "other"
+                            ],
+                            "description": "Occasion type",
+                            "nullable": true
+                          },
+                          "specialRequests": {
+                            "type": "string",
+                            "description": "Guest special requests/notes",
+                            "nullable": true
+                          },
+                          "internalNotes": {
+                            "type": "string",
+                            "description": "Staff internal notes (legacy single-note field; prefer notes array)",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "uuid",
+                                "note",
+                                "sortOrder",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "uuid": {
+                                  "type": "string",
+                                  "description": "Note UUID",
+                                  "format": "uuid"
+                                },
+                                "note": {
+                                  "type": "string",
+                                  "description": "Note text"
+                                },
+                                "sortOrder": {
+                                  "type": "integer",
+                                  "description": "Display order"
+                                },
+                                "createdByRetailerUserId": {
+                                  "type": "integer",
+                                  "description": "Staff user who created the note",
+                                  "nullable": true
+                                },
+                                "updatedByRetailerUserId": {
+                                  "type": "integer",
+                                  "description": "Staff user who last updated the note",
+                                  "nullable": true
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Note creation timestamp"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Note last update timestamp"
+                                }
+                              }
+                            },
+                            "description": "Notes with metadata"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "confirmed",
+                              "checked_in",
+                              "seated",
+                              "completed",
+                              "cancelled",
+                              "no_show"
+                            ],
+                            "description": "Booking status"
+                          },
+                          "paymentType": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "deposit",
+                              "full_prepayment"
+                            ],
+                            "description": "Payment type",
+                            "nullable": true
+                          },
+                          "depositAmountCents": {
+                            "type": "integer",
+                            "description": "Deposit amount in cents",
+                            "nullable": true
+                          },
+                          "purchaseId": {
+                            "type": "integer",
+                            "description": "Associated purchase/payment ID",
+                            "nullable": true
+                          },
+                          "confirmationCode": {
+                            "type": "string",
+                            "description": "Unique confirmation code (KRM-XXXXXX format)"
+                          },
+                          "bookingSource": {
+                            "type": "string",
+                            "enum": [
+                              "direct",
+                              "website",
+                              "phone",
+                              "walkin",
+                              "third_party"
+                            ],
+                            "description": "Source of booking",
+                            "nullable": true
+                          },
+                          "estimatedRevenueCents": {
+                            "type": "integer",
+                            "description": "Estimated revenue in cents",
+                            "nullable": true
+                          },
+                          "resourceLocked": {
+                            "type": "boolean",
+                            "description": "Whether booking resource is locked"
+                          },
+                          "guestName": {
+                            "type": "string",
+                            "description": "Guest name",
+                            "nullable": true
+                          },
+                          "guestEmail": {
+                            "type": "string",
+                            "description": "Guest email",
+                            "format": "email",
+                            "nullable": true
+                          },
+                          "guestPhone": {
+                            "type": "string",
+                            "description": "Guest phone number",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          },
+                          "confirmedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Confirmation timestamp",
+                            "nullable": true
+                          },
+                          "seatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Seating timestamp",
+                            "nullable": true
+                          },
+                          "completedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Completion timestamp",
+                            "nullable": true
+                          },
+                          "cancelledAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Cancellation timestamp",
+                            "nullable": true
+                          },
+                          "tabId": {
+                            "type": "string",
+                            "description": "Associated tab UUID",
+                            "format": "uuid",
+                            "nullable": true
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -4003,9 +4951,256 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "bookingDate",
+                          "startTime",
+                          "endTime",
+                          "timezone",
+                          "guestCount",
+                          "notes",
+                          "status",
+                          "confirmationCode",
+                          "resourceLocked",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Booking ID",
+                            "format": "uuid"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "tableId": {
+                            "type": "string",
+                            "description": "Associated table/QR code UUID",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "bookingDate": {
+                            "type": "string",
+                            "description": "Date of booking (YYYY-MM-DD)",
+                            "format": "date"
+                          },
+                          "startTime": {
+                            "type": "string",
+                            "description": "Start time (HH:MM)"
+                          },
+                          "endTime": {
+                            "type": "string",
+                            "description": "End time (HH:MM)"
+                          },
+                          "timezone": {
+                            "type": "string",
+                            "description": "IANA timezone (e.g., \"Europe/Stockholm\")"
+                          },
+                          "primaryUserId": {
+                            "type": "integer",
+                            "description": "ID of primary guest/user",
+                            "nullable": true
+                          },
+                          "guestCount": {
+                            "type": "integer",
+                            "description": "Number of guests"
+                          },
+                          "occasion": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "birthday",
+                              "anniversary",
+                              "business",
+                              "date",
+                              "celebration",
+                              "other"
+                            ],
+                            "description": "Occasion type",
+                            "nullable": true
+                          },
+                          "specialRequests": {
+                            "type": "string",
+                            "description": "Guest special requests/notes",
+                            "nullable": true
+                          },
+                          "internalNotes": {
+                            "type": "string",
+                            "description": "Staff internal notes (legacy single-note field; prefer notes array)",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "uuid",
+                                "note",
+                                "sortOrder",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "uuid": {
+                                  "type": "string",
+                                  "description": "Note UUID",
+                                  "format": "uuid"
+                                },
+                                "note": {
+                                  "type": "string",
+                                  "description": "Note text"
+                                },
+                                "sortOrder": {
+                                  "type": "integer",
+                                  "description": "Display order"
+                                },
+                                "createdByRetailerUserId": {
+                                  "type": "integer",
+                                  "description": "Staff user who created the note",
+                                  "nullable": true
+                                },
+                                "updatedByRetailerUserId": {
+                                  "type": "integer",
+                                  "description": "Staff user who last updated the note",
+                                  "nullable": true
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Note creation timestamp"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Note last update timestamp"
+                                }
+                              }
+                            },
+                            "description": "Notes with metadata"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "confirmed",
+                              "checked_in",
+                              "seated",
+                              "completed",
+                              "cancelled",
+                              "no_show"
+                            ],
+                            "description": "Booking status"
+                          },
+                          "paymentType": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "deposit",
+                              "full_prepayment"
+                            ],
+                            "description": "Payment type",
+                            "nullable": true
+                          },
+                          "depositAmountCents": {
+                            "type": "integer",
+                            "description": "Deposit amount in cents",
+                            "nullable": true
+                          },
+                          "purchaseId": {
+                            "type": "integer",
+                            "description": "Associated purchase/payment ID",
+                            "nullable": true
+                          },
+                          "confirmationCode": {
+                            "type": "string",
+                            "description": "Unique confirmation code (KRM-XXXXXX format)"
+                          },
+                          "bookingSource": {
+                            "type": "string",
+                            "enum": [
+                              "direct",
+                              "website",
+                              "phone",
+                              "walkin",
+                              "third_party"
+                            ],
+                            "description": "Source of booking",
+                            "nullable": true
+                          },
+                          "estimatedRevenueCents": {
+                            "type": "integer",
+                            "description": "Estimated revenue in cents",
+                            "nullable": true
+                          },
+                          "resourceLocked": {
+                            "type": "boolean",
+                            "description": "Whether booking resource is locked"
+                          },
+                          "guestName": {
+                            "type": "string",
+                            "description": "Guest name",
+                            "nullable": true
+                          },
+                          "guestEmail": {
+                            "type": "string",
+                            "description": "Guest email",
+                            "format": "email",
+                            "nullable": true
+                          },
+                          "guestPhone": {
+                            "type": "string",
+                            "description": "Guest phone number",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          },
+                          "confirmedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Confirmation timestamp",
+                            "nullable": true
+                          },
+                          "seatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Seating timestamp",
+                            "nullable": true
+                          },
+                          "completedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Completion timestamp",
+                            "nullable": true
+                          },
+                          "cancelledAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Cancellation timestamp",
+                            "nullable": true
+                          },
+                          "tabId": {
+                            "type": "string",
+                            "description": "Associated tab UUID",
+                            "format": "uuid",
+                            "nullable": true
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -4053,9 +5248,94 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "userId",
+                          "requestedDate",
+                          "partySize",
+                          "status",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Waitlist entry ID",
+                            "format": "uuid"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "userId": {
+                            "type": "integer",
+                            "description": "User/guest ID"
+                          },
+                          "requestedDate": {
+                            "type": "string",
+                            "description": "Requested booking date (YYYY-MM-DD)",
+                            "format": "date"
+                          },
+                          "preferredStartTime": {
+                            "type": "string",
+                            "description": "Preferred start time (HH:MM)",
+                            "nullable": true
+                          },
+                          "preferredEndTime": {
+                            "type": "string",
+                            "description": "Preferred end time (HH:MM)",
+                            "nullable": true
+                          },
+                          "partySize": {
+                            "type": "integer",
+                            "description": "Party size requested"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "waiting",
+                              "notified",
+                              "converted",
+                              "expired",
+                              "removed"
+                            ],
+                            "description": "Waitlist status"
+                          },
+                          "convertedBookingId": {
+                            "type": "string",
+                            "description": "ID of booking if converted",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Expiration timestamp",
+                            "nullable": true
+                          },
+                          "notifiedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When guest was notified",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -4103,9 +5383,94 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "userId",
+                          "requestedDate",
+                          "partySize",
+                          "status",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Waitlist entry ID",
+                            "format": "uuid"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "userId": {
+                            "type": "integer",
+                            "description": "User/guest ID"
+                          },
+                          "requestedDate": {
+                            "type": "string",
+                            "description": "Requested booking date (YYYY-MM-DD)",
+                            "format": "date"
+                          },
+                          "preferredStartTime": {
+                            "type": "string",
+                            "description": "Preferred start time (HH:MM)",
+                            "nullable": true
+                          },
+                          "preferredEndTime": {
+                            "type": "string",
+                            "description": "Preferred end time (HH:MM)",
+                            "nullable": true
+                          },
+                          "partySize": {
+                            "type": "integer",
+                            "description": "Party size requested"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "waiting",
+                              "notified",
+                              "converted",
+                              "expired",
+                              "removed"
+                            ],
+                            "description": "Waitlist status"
+                          },
+                          "convertedBookingId": {
+                            "type": "string",
+                            "description": "ID of booking if converted",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Expiration timestamp",
+                            "nullable": true
+                          },
+                          "notifiedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When guest was notified",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -4351,9 +5716,57 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "name",
+                          "locationId",
+                          "tableIds",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Table group ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Group name (e.g., \"Patio\", \"Main Dining Room\")"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Group description",
+                            "nullable": true
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "tableIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "Table UUID",
+                              "format": "uuid"
+                            },
+                            "description": "Array of table UUIDs in this group"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp",
+                            "nullable": true
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -4967,9 +6380,113 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "alertType",
+                          "severity",
+                          "title",
+                          "latestStatus",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Alert ID",
+                            "format": "uuid"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "alertType": {
+                            "type": "string",
+                            "description": "Type of alert (e.g., \"system_error\", \"inventory_warning\")"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "info",
+                              "warning",
+                              "error",
+                              "critical"
+                            ],
+                            "description": "Severity level"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Alert title"
+                          },
+                          "message": {
+                            "type": "string",
+                            "description": "Alert message/description",
+                            "nullable": true
+                          },
+                          "details": {
+                            "type": "object",
+                            "description": "Additional details",
+                            "additionalProperties": true,
+                            "nullable": true
+                          },
+                          "stackTrace": {
+                            "type": "string",
+                            "description": "Stack trace for errors",
+                            "nullable": true
+                          },
+                          "context": {
+                            "type": "object",
+                            "description": "Additional context",
+                            "additionalProperties": true,
+                            "nullable": true
+                          },
+                          "latestStatus": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "acknowledged",
+                              "resolved"
+                            ],
+                            "description": "Current status"
+                          },
+                          "resolvedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When alert was resolved",
+                            "nullable": true
+                          },
+                          "resolvedBy": {
+                            "type": "integer",
+                            "description": "Staff user ID who resolved alert",
+                            "nullable": true
+                          },
+                          "acknowledgedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When alert was acknowledged",
+                            "nullable": true
+                          },
+                          "acknowledgedBy": {
+                            "type": "integer",
+                            "description": "Staff user ID who acknowledged alert",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5074,9 +6591,77 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "title",
+                          "authorRetailerUserId",
+                          "status",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Article ID",
+                            "format": "uuid"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Article title"
+                          },
+                          "content": {
+                            "type": "object",
+                            "description": "Article content (rich text/markdown structure)",
+                            "additionalProperties": true,
+                            "nullable": true
+                          },
+                          "authorRetailerUserId": {
+                            "type": "integer",
+                            "description": "Staff user ID who created the article"
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Article tags/categories",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "DRAFT",
+                              "PUBLISHED"
+                            ],
+                            "description": "Publication status"
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "description": "Header/cover image URL",
+                            "format": "uri",
+                            "nullable": true
+                          },
+                          "slackMessage": {
+                            "type": "string",
+                            "description": "Slack message text for cross-posting",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5241,9 +6826,77 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "title",
+                          "authorRetailerUserId",
+                          "status",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Article ID",
+                            "format": "uuid"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Article title"
+                          },
+                          "content": {
+                            "type": "object",
+                            "description": "Article content (rich text/markdown structure)",
+                            "additionalProperties": true,
+                            "nullable": true
+                          },
+                          "authorRetailerUserId": {
+                            "type": "integer",
+                            "description": "Staff user ID who created the article"
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Article tags/categories",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "DRAFT",
+                              "PUBLISHED"
+                            ],
+                            "description": "Publication status"
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "description": "Header/cover image URL",
+                            "format": "uri",
+                            "nullable": true
+                          },
+                          "slackMessage": {
+                            "type": "string",
+                            "description": "Slack message text for cross-posting",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5474,9 +7127,68 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "uuid",
+                          "name",
+                          "locationId",
+                          "inheritToChildren",
+                          "active",
+                          "isInherited",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Cost center ID"
+                          },
+                          "uuid": {
+                            "type": "string",
+                            "description": "Cost center UUID",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Cost center name"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Cost center description",
+                            "nullable": true
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "inheritToChildren": {
+                            "type": "boolean",
+                            "description": "Whether to inherit to child locations"
+                          },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether cost center is active"
+                          },
+                          "isInherited": {
+                            "type": "boolean",
+                            "description": "Whether this cost center is inherited from a parent location"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5524,9 +7236,68 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "uuid",
+                          "name",
+                          "locationId",
+                          "inheritToChildren",
+                          "active",
+                          "isInherited",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Cost center ID"
+                          },
+                          "uuid": {
+                            "type": "string",
+                            "description": "Cost center UUID",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Cost center name"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Cost center description",
+                            "nullable": true
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "inheritToChildren": {
+                            "type": "boolean",
+                            "description": "Whether to inherit to child locations"
+                          },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether cost center is active"
+                          },
+                          "isInherited": {
+                            "type": "boolean",
+                            "description": "Whether this cost center is inherited from a parent location"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5633,9 +7404,47 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "name",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Serving center ID"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Serving center name (e.g., \"Kitchen\", \"Bar\")"
+                          },
+                          "color": {
+                            "type": "string",
+                            "description": "Color/hex code for UI display",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5683,9 +7492,47 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "name",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Serving center ID"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Serving center name (e.g., \"Kitchen\", \"Bar\")"
+                          },
+                          "color": {
+                            "type": "string",
+                            "description": "Color/hex code for UI display",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5792,9 +7639,81 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "type",
+                          "name",
+                          "version",
+                          "isActive",
+                          "isSystem",
+                          "content",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Template ID",
+                            "format": "uuid"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "kitchen_ticket",
+                              "purchase_receipt",
+                              "pre_check",
+                              "order_confirmation",
+                              "custom"
+                            ],
+                            "description": "Template type"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Template name"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Template description",
+                            "nullable": true
+                          },
+                          "version": {
+                            "type": "integer",
+                            "description": "Template version number"
+                          },
+                          "isActive": {
+                            "type": "boolean",
+                            "description": "Whether template is active"
+                          },
+                          "isSystem": {
+                            "type": "boolean",
+                            "description": "Whether this is a system/default template"
+                          },
+                          "content": {
+                            "type": "object",
+                            "description": "Template content (JSONB structure defining layout and variables)",
+                            "additionalProperties": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          },
+                          "createdBy": {
+                            "type": "integer",
+                            "description": "Staff user ID who created template",
+                            "nullable": true
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5842,9 +7761,36 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "description": "Partial object — only fields that changed are included. Merge with previously cached template.",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Updated template name"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Updated description",
+                            "nullable": true
+                          },
+                          "content": {
+                            "type": "object",
+                            "description": "Updated template content",
+                            "additionalProperties": true
+                          },
+                          "isActive": {
+                            "type": "boolean",
+                            "description": "Updated active status"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "description": "Updated version number"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5949,9 +7895,94 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "required": [
+                          "id",
+                          "locationId",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Settings ID",
+                            "format": "uuid"
+                          },
+                          "locationId": {
+                            "type": "integer",
+                            "description": "Location ID"
+                          },
+                          "fontSize": {
+                            "type": "integer",
+                            "description": "Font size in points",
+                            "nullable": true
+                          },
+                          "fontFamily": {
+                            "type": "string",
+                            "description": "Font family name",
+                            "nullable": true
+                          },
+                          "lineSpacing": {
+                            "type": "integer",
+                            "description": "Line spacing in points",
+                            "nullable": true
+                          },
+                          "logoUrl": {
+                            "type": "string",
+                            "description": "Logo image URL",
+                            "format": "uri",
+                            "nullable": true
+                          },
+                          "headerText": {
+                            "type": "string",
+                            "description": "Custom header text",
+                            "nullable": true
+                          },
+                          "footerText": {
+                            "type": "string",
+                            "description": "Custom footer text",
+                            "nullable": true
+                          },
+                          "showLogo": {
+                            "type": "boolean",
+                            "description": "Whether to display logo",
+                            "nullable": true
+                          },
+                          "printQrCode": {
+                            "type": "boolean",
+                            "description": "Whether to print QR codes",
+                            "nullable": true
+                          },
+                          "printVatBreakdown": {
+                            "type": "boolean",
+                            "description": "Whether to include VAT breakdown",
+                            "nullable": true
+                          },
+                          "kitchenTicketBeep": {
+                            "type": "boolean",
+                            "description": "Whether to beep on kitchen ticket print",
+                            "nullable": true
+                          },
+                          "language": {
+                            "type": "string",
+                            "description": "Language code for printed text",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -5999,9 +8030,45 @@
                       },
                       "data": {
                         "type": "object",
-                        "additionalProperties": true
+                        "description": "Partial object — only fields that changed are included.",
+                        "properties": {
+                          "overrideScope": {
+                            "type": "string",
+                            "enum": [
+                              "full",
+                              "section",
+                              "settings"
+                            ],
+                            "description": "Scope of override"
+                          },
+                          "customTemplateContent": {
+                            "type": "object",
+                            "description": "Custom template content override",
+                            "additionalProperties": true,
+                            "nullable": true
+                          },
+                          "sectionOverrides": {
+                            "type": "object",
+                            "description": "Section-specific overrides",
+                            "additionalProperties": true,
+                            "nullable": true
+                          },
+                          "settingsOverrides": {
+                            "type": "object",
+                            "description": "Settings overrides",
+                            "additionalProperties": true,
+                            "nullable": true
+                          },
+                          "isActive": {
+                            "type": "boolean",
+                            "description": "Whether override is active"
+                          }
+                        }
                       }
-                    }
+                    },
+                    "required": [
+                      "data"
+                    ]
                   }
                 ]
               }
@@ -6737,8 +8804,7 @@
           "resource",
           "resourceId",
           "timestamp",
-          "apiVersion",
-          "data"
+          "apiVersion"
         ],
         "properties": {
           "id": {
@@ -6768,11 +8834,6 @@
             "enum": [
               "v1"
             ]
-          },
-          "data": {
-            "type": "object",
-            "description": "Event-specific payload — see individual events for shape",
-            "additionalProperties": true
           }
         }
       }
