@@ -1,3 +1,5 @@
+[← Back to API docs](/)
+
 # Custom Voucher Provider — Wire Contract
 
 If your restaurant manages voucher codes in your own system, Karma can forward voucher operations to your URLs instead of Karma's native voucher store. This document is everything a backend engineer needs to implement the three HTTP endpoints Karma will call.

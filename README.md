@@ -21,14 +21,14 @@ This repository hosts the OpenAPI specification and documentation for the [Karma
 | [Inventory Sync](examples/inventory-sync.md) | Two-way inventory sync with POS systems |
 | [Real-time Webhooks](examples/realtime-webhooks.md) | Receive instant sales notifications |
 
-## Provider Wire Contracts
+## Custom Integrations
 
 For partners building a custom voucher or loyalty backend that Karma forwards traffic to.
 
-| Provider | Description |
-|----------|-------------|
-| [Custom Voucher Provider](providers/custom-voucher-provider.md) | Three HTTPS endpoints (check, commit, reactivate) Karma calls when a guest applies a voucher code at checkout |
-| [Custom Loyalty Provider](providers/custom-loyalty-provider.md) | Six HTTPS endpoints (lookup, enroll, award, account, rewards, redeem) covering member identification, point accrual, and reward redemption |
+| Integration | Description |
+|-------------|-------------|
+| [Voucher Provider](custom-integrations/voucher-provider.md) | Three HTTPS endpoints (check, commit, reactivate) Karma calls when a guest applies a voucher code at checkout |
+| [Loyalty Provider](custom-integrations/loyalty-provider.md) | Six HTTPS endpoints (lookup, enroll, award, account, rewards, redeem) covering member identification, point accrual, and reward redemption |
 
 ## API Environments
 

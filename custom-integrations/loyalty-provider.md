@@ -1,3 +1,5 @@
+[← Back to API docs](/)
+
 # Custom Loyalty Provider — Wire Contract
 
 If your restaurant runs its own loyalty program, Karma can forward member identification, point accrual, and reward redemption to your URLs instead of Karma's native loyalty system. This document is everything a backend engineer needs to implement the six HTTP endpoints Karma will call.

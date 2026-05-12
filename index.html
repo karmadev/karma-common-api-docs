@@ -8,37 +8,95 @@
   <link rel="icon" href="https://karma.life/favicon.ico">
   <style>
     body { margin: 0; padding: 0; }
-    .version-selector {
+    .top-nav {
       position: fixed;
       top: 10px;
       right: 10px;
       z-index: 1000;
-      background: #1a1a2e;
-      padding: 8px 12px;
-      border-radius: 6px;
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
       font-family: system-ui, sans-serif;
       font-size: 14px;
     }
-    .version-selector select {
+    .nav-pill {
+      background: #1a1a2e;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: #fff;
+    }
+    .nav-pill label {
+      color: #e94560;
+      margin-right: 8px;
+    }
+    .nav-pill select,
+    .nav-pill summary {
       background: #16213e;
       color: #fff;
       border: 1px solid #0f3460;
       padding: 4px 8px;
       border-radius: 4px;
       cursor: pointer;
+      font-size: 14px;
     }
-    .version-selector label {
+    .nav-pill details {
+      position: relative;
+      display: inline-block;
+    }
+    .nav-pill summary {
+      list-style: none;
+      user-select: none;
+    }
+    .nav-pill summary::-webkit-details-marker { display: none; }
+    .nav-pill summary::after {
+      content: " \25BE";
       color: #e94560;
-      margin-right: 8px;
+    }
+    .nav-pill details[open] .menu {
+      display: block;
+    }
+    .nav-pill .menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      min-width: 220px;
+      padding: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    .nav-pill .menu a {
+      display: block;
+      padding: 8px 10px;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .nav-pill .menu a:hover {
+      background: #16213e;
     }
   </style>
 </head>
 <body>
-  <div class="version-selector">
-    <label for="version">API Version:</label>
-    <select id="version" onchange="switchVersion(this.value)">
-      <option value="latest">Latest</option>
-    </select>
+  <div class="top-nav">
+    <div class="nav-pill">
+      <details>
+        <summary>Custom Integrations</summary>
+        <div class="menu">
+          <a href="/custom-integrations/voucher-provider">Voucher Provider</a>
+          <a href="/custom-integrations/loyalty-provider">Loyalty Provider</a>
+        </div>
+      </details>
+    </div>
+    <div class="nav-pill">
+      <label for="version">API Version:</label>
+      <select id="version" onchange="switchVersion(this.value)">
+        <option value="latest">Latest</option>
+      </select>
+    </div>
   </div>
 
   <script id="api-reference" data-url="./latest/openapi.json"></script>
