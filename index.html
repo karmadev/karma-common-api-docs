@@ -8,102 +8,53 @@
   <link rel="icon" href="https://karma.life/favicon.ico">
   <style>
     body { margin: 0; padding: 0; }
-    .top-nav {
+    .version-selector {
       position: fixed;
       top: 10px;
       right: 10px;
       z-index: 1000;
-      display: flex;
-      gap: 8px;
-      align-items: stretch;
-      font-family: system-ui, sans-serif;
-      font-size: 14px;
-    }
-    .nav-pill {
       background: #1a1a2e;
       padding: 8px 12px;
       border-radius: 6px;
-      color: #fff;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
     }
-    .nav-pill label {
-      color: #e94560;
-      margin-right: 8px;
-    }
-    .nav-pill select,
-    .nav-pill summary {
+    .version-selector select {
       background: #16213e;
       color: #fff;
       border: 1px solid #0f3460;
       padding: 4px 8px;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 14px;
     }
-    .nav-pill details {
-      position: relative;
-      display: inline-block;
-    }
-    .nav-pill summary {
-      list-style: none;
-      user-select: none;
-    }
-    .nav-pill summary::-webkit-details-marker { display: none; }
-    .nav-pill summary::after {
-      content: " \25BE";
+    .version-selector label {
       color: #e94560;
-    }
-    .nav-pill details[open] .menu {
-      display: block;
-    }
-    .nav-pill .menu {
-      display: none;
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      background: #1a1a2e;
-      border: 1px solid #0f3460;
-      border-radius: 6px;
-      min-width: 220px;
-      padding: 6px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    }
-    .nav-pill .menu a {
-      display: block;
-      padding: 8px 10px;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 4px;
-      white-space: nowrap;
-    }
-    .nav-pill .menu a:hover {
-      background: #16213e;
+      margin-right: 8px;
     }
   </style>
 </head>
 <body>
-  <div class="top-nav">
-    <div class="nav-pill">
-      <details>
-        <summary>Custom Integrations</summary>
-        <div class="menu">
-          <a href="/custom-integrations/voucher-provider">Voucher Provider</a>
-          <a href="/custom-integrations/loyalty-provider">Loyalty Provider</a>
-        </div>
-      </details>
-    </div>
-    <div class="nav-pill">
-      <label for="version">API Version:</label>
-      <select id="version" onchange="switchVersion(this.value)">
-        <option value="latest">Latest</option>
-      </select>
-    </div>
+  <div class="version-selector">
+    <label for="version">API Version:</label>
+    <select id="version" onchange="switchVersion(this.value)">
+      <option value="latest">Latest</option>
+    </select>
   </div>
 
-  <script id="api-reference" data-url="./latest/openapi.json"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <script id="api-reference"></script>
 
   <script>
-    // Load available versions
+    // Determine which OpenAPI spec to load (default: latest)
+    const params = new URLSearchParams(window.location.search);
+    const specPath = params.get('spec') || 'latest/openapi.json';
+    const specBase = specPath.replace(/\/[^/]+$/, '');
+
+    function switchVersion(version) {
+      const path = version === 'latest' ? 'latest' : `versions/${version}`;
+      window.location.href = `?spec=${path}/openapi.json`;
+    }
+
+    // Populate version selector
     fetch('./versions/manifest.json')
       .then(r => r.json())
       .then(manifest => {
@@ -116,19 +67,55 @@
           select.appendChild(opt);
         });
       })
-      .catch(() => console.log('Version manifest not found'));
+      .catch(() => {});
 
-    function switchVersion(version) {
-      const path = version === 'latest' ? 'latest' : `versions/${version}`;
-      window.location.href = `?spec=${path}/openapi.json`;
-    }
+    // Strip the back-link line from standalone-page markdown so it doesn't
+    // appear inside the Scalar render.
+    const stripBack = (md) => md.replace(/^\s*\[← Back[^\]]*\]\([^)]*\)\s*\n+/, '');
 
-    // Handle version from URL
-    const params = new URLSearchParams(window.location.search);
-    const specUrl = params.get('spec');
-    if (specUrl) {
-      document.getElementById('api-reference').dataset.url = specUrl;
-    }
+    // Load the OpenAPI spec, splice in the Custom Integrations guides as
+    // tag-only sidebar entries grouped under "Custom Integrations", then hand
+    // the result to Scalar via inline content.
+    Promise.all([
+      fetch('./' + specPath).then(r => r.json()),
+      fetch('./custom-integrations/voucher-provider.md').then(r => r.text()),
+      fetch('./custom-integrations/loyalty-provider.md').then(r => r.text()),
+    ])
+      .then(([spec, voucherMd, loyaltyMd]) => {
+        const guideTags = [
+          { name: 'Custom Voucher Provider', description: stripBack(voucherMd) },
+          { name: 'Custom Loyalty Provider', description: stripBack(loyaltyMd) },
+        ];
+
+        spec.tags = (spec.tags || []).concat(guideTags);
+
+        // Preserve any existing tag groups; append a "Custom Integrations"
+        // group that surfaces the two guide tags in the sidebar.
+        const existingGroups = spec['x-tagGroups'] || [];
+        spec['x-tagGroups'] = existingGroups.concat([
+          {
+            name: 'Custom Integrations',
+            tags: guideTags.map(t => t.name),
+          },
+        ]);
+
+        const ref = document.getElementById('api-reference');
+        ref.dataset.configuration = JSON.stringify({ content: spec });
+
+        // Load Scalar after the spec is prepared so it picks up the inline content.
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
+        document.body.appendChild(s);
+      })
+      .catch((err) => {
+        // If guide fetch fails, fall back to plain spec so the API ref still loads.
+        console.warn('Failed to inject custom integration guides, falling back:', err);
+        const ref = document.getElementById('api-reference');
+        ref.dataset.url = './' + specPath;
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
+        document.body.appendChild(s);
+      });
   </script>
 </body>
 </html>

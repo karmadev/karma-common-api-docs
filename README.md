@@ -23,7 +23,7 @@ This repository hosts the OpenAPI specification and documentation for the [Karma
 
 ## Custom Integrations
 
-For partners building a custom voucher or loyalty backend that Karma forwards traffic to.
+For partners building a custom voucher or loyalty backend that Karma forwards traffic to. These render in the **Custom Integrations** group of the [docs.karma.life](https://docs.karma.life) sidebar.
 
 | Integration | Description |
 |-------------|-------------|
