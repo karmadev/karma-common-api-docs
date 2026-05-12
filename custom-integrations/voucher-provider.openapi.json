@@ -1,0 +1,281 @@
+{
+  "tag": {
+    "name": "Custom Voucher Provider",
+    "description": "If your restaurant manages voucher codes in your own system, Karma can forward voucher operations to your URLs instead of Karma's native voucher store. You implement three HTTPS endpoints; Karma calls them as a guest applies a voucher code at checkout.\n\n## When this is used\n\nA Karma operator enables the `custom` voucher provider on a specific restaurant location. The restaurant (or the restaurant's IT vendor) owns the voucher database, and Karma becomes the point-of-sale client that asks your system whether a code is valid and then tells you when to consume it.\n\nKarma supports multiple voucher provider types; this document covers the `custom` type only.\n\n## Lifecycle\n\n1. The guest enters a voucher code at checkout. Karma calls your **check** endpoint to validate and reserve.\n2. The guest pays. Karma calls your **commit** endpoint to consume the voucher.\n3. The guest cancels or payment fails. Karma calls your **reactivate** endpoint to release the reservation.\n\n## What you implement\n\nThree HTTPS endpoints of your choosing. The URLs do not need to share a hostname, a path prefix, or a deployment. You give Karma three absolute URLs when the integration is configured.\n\n## What you don't need\n\nNo inbound callbacks to Karma. No HMAC request signing (Karma does not sign outbound requests today). No Karma-specific SDK, library, or client certificate. Plain HTTPS, JSON in, JSON out, optional Basic Auth or custom header auth.\n\n## What you do need\n\nIdempotency on **commit** and **reactivate** — if Karma retries a request with the same `transactionId`, your endpoint must not double-consume the voucher. See **Idempotency** below.\n\n## Authentication & security\n\n**HTTPS required.** Every URL you give Karma must begin with `https://`. Plain `http://` URLs are rejected by Karma's SSRF guard at configuration time and at each outbound request. Karma also blocks URLs that resolve to private or loopback addresses (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fe80::/10`).\n\n**Auth modes (pick one per integration):**\n\n| Mode | Karma sends | You verify |\n|------|-------------|------------|\n| `none` | No `Authorization` header | Use only if your endpoints are IP-restricted |\n| `basic` | `Authorization: Basic base64(username:password)` | Compare decoded credential to your stored value |\n| `headers` | Any custom headers you configured (e.g. `X-Api-Key`) | Compare each header value to your stored secret |\n\nAuth credentials (passwords, header values) are stored encrypted at rest (AES-256-CBC) and decrypted in memory only when a request is about to be sent. They are never written to logs.\n\n**No HMAC signing yet.** Karma does not currently sign outbound requests. Authentication relies on HTTPS plus the Basic or header mode you configured. If your compliance requirements call for HMAC-SHA256 request signatures, raise it with Karma support.\n\n## Idempotency & retries\n\nKarma automatically retries on:\n- HTTP 5xx responses (500/502/503/504 etc.)\n- Timeouts (5-second per-request budget)\n- Network errors (`ECONNREFUSED`, `ECONNRESET`, `ENOTFOUND`, `ECONNABORTED`, DNS failure)\n\nKarma does **not** retry on 4xx — those are treated as definitive rejections.\n\n**Retry count:** up to 2 retries (3 attempts total worst case), no backoff.\n\nEvery `commit` and `reactivate` request carries a `transactionId` in the body. Your endpoint MUST dedupe by this value — if you receive the same `transactionId` twice, return the same success body without making any additional change. A unique constraint on `transactionId` in your database is the simplest way to make this race-free.\n\n`transactionId` format: `res_<32 hex chars>` (max length 100). The same `transactionId` is used for both commit and reactivate of a given reservation.\n\n## All money in cents\n\nAll monetary values are integers in cents. Never return fractional values. Karma will reject responses that contain fractional `discountAmountCents` or `amountCents`.\n\n## Reference implementation\n\nA minimal Node.js + Express server implementing all three endpoints lives in [`custom-integrations/voucher-provider.md`](https://github.com/karmadev/karma-common-api-docs/blob/main/custom-integrations/voucher-provider.md#reference-implementation) on GitHub."
+  },
+  "paths": {
+    "/voucher/check": {
+      "post": {
+        "tags": ["Custom Voucher Provider"],
+        "summary": "Check & reserve a voucher",
+        "operationId": "customVoucherCheck",
+        "description": "Karma calls this when a guest enters a voucher code at checkout. Validate the code against the current cart and reserve its value. Return the discount amount Karma should apply.\n\n**Path:** Karma calls the absolute `checkUrl` you configured per location — the path shown here is just an example.\n\n**Note on `cart.totalCents`:** Karma sums `priceCents * quantity` across all items.\n\n**Note on `discountAmountCents` in the response:** Karma caps this at `cart.totalCents` internally, so returning a value larger than the cart total is safe — the guest gets a full discount on this cart.\n\n**Note on `expiresAt`:** if omitted, Karma applies a 2-hour default reservation window.\n\n**Note on `providerRef`:** Karma echoes this opaque string back on commit/reactivate. Use it to correlate to your internal record.",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider — you choose the host and path" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VoucherCheckRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either a successful reservation or an error envelope. Karma inspects `ok`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/VoucherCheckSuccess" },
+                    { "$ref": "#/components/schemas/VoucherErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful reservation",
+                    "value": {
+                      "ok": true,
+                      "voucherNr": "VCH-ABC123",
+                      "discountAmountCents": 5000,
+                      "expiresAt": "2026-04-22T10:00:00Z",
+                      "providerRef": "internal-voucher-9f3c"
+                    }
+                  },
+                  "notFound": {
+                    "summary": "Code not found",
+                    "value": {
+                      "ok": false,
+                      "error": {
+                        "code": "VOUCHER_NOT_FOUND",
+                        "message": "No voucher matches the supplied code"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Definitive rejection. Karma does not retry. Body MUST follow the error envelope.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VoucherErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/voucher/commit": {
+      "post": {
+        "tags": ["Custom Voucher Provider"],
+        "summary": "Consume a reserved voucher",
+        "operationId": "customVoucherCommit",
+        "description": "Karma calls this after the guest has successfully paid. Mark the voucher as used, decrement its remaining balance, or otherwise register the redemption.\n\n**Path:** Karma calls the absolute `commitUrl` you configured per location.\n\n**Idempotency:** required. Dedupe by `transactionId`.\n\n**`amountCents`:** always equals the `discountAmountCents` you returned from check, capped at the cart total.",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VoucherCommitRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either success or an error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/VoucherOkResponse" },
+                    { "$ref": "#/components/schemas/VoucherErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "success": { "value": { "ok": true } },
+                  "alreadyCommitted": {
+                    "value": {
+                      "ok": false,
+                      "error": {
+                        "code": "VOUCHER_ALREADY_COMMITTED",
+                        "message": "Voucher was already consumed"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/voucher/reactivate": {
+      "post": {
+        "tags": ["Custom Voucher Provider"],
+        "summary": "Release a reservation",
+        "operationId": "customVoucherReactivate",
+        "description": "Karma calls this when the guest cancels payment, closes the checkout flow, or the reservation times out before a commit lands. Undo the reservation so the voucher can be used again.\n\n**Path:** Karma calls the absolute `reactivateUrl` you configured per location.\n\n**Idempotency:** required. Dedupe by `transactionId`.\n\n**Note on already-committed reservations:** if commit already succeeded before the guest cancelled, you may either roll back the redemption (if your business rules allow) or respond with `VOUCHER_ALREADY_COMMITTED`. Karma logs the failure and proceeds; the guest's payment path is not affected.",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VoucherCommitRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either success or an error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/VoucherOkResponse" },
+                    { "$ref": "#/components/schemas/VoucherErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "success": { "value": { "ok": true } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "VoucherCartItem": {
+        "type": "object",
+        "required": ["inventoryItemId", "quantity", "priceCents"],
+        "properties": {
+          "inventoryItemId": {
+            "type": "integer",
+            "description": "The ID you would see on a POS export from the restaurant. Treat as opaque unless you have explicitly agreed on item-to-ID mapping."
+          },
+          "quantity": { "type": "integer", "minimum": 1, "description": "How many of this item are in the cart." },
+          "priceCents": { "type": "integer", "description": "Per-unit price of this item, in cents." }
+        }
+      },
+      "VoucherCheckRequest": {
+        "type": "object",
+        "required": ["code", "cart"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The voucher code the guest entered at checkout. Take this as the user-facing value; your system decides how to match (exact, canonicalized, case-insensitive, etc.).",
+            "example": "VCH-ABC123"
+          },
+          "cart": {
+            "type": "object",
+            "required": ["totalCents", "items"],
+            "properties": {
+              "totalCents": {
+                "type": "integer",
+                "description": "Sum of `priceCents * quantity` across all items, in cents."
+              },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/components/schemas/VoucherCartItem" }
+              }
+            }
+          }
+        }
+      },
+      "VoucherCheckSuccess": {
+        "type": "object",
+        "required": ["ok", "voucherNr", "discountAmountCents"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [true] },
+          "voucherNr": {
+            "type": "string",
+            "description": "The voucher identifier in your system. May equal the input `code` or a canonicalized form. Karma stores this as the reservation's voucher number.",
+            "example": "VCH-ABC123"
+          },
+          "discountAmountCents": {
+            "type": "integer",
+            "description": "How much Karma should discount the cart, in cents. Karma caps at `cart.totalCents`.",
+            "example": 5000
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this reservation expires. If omitted, Karma applies a 2-hour default."
+          },
+          "providerRef": {
+            "type": "string",
+            "description": "Opaque string Karma echoes back on commit/reactivate. Use to correlate to your internal record.",
+            "example": "internal-voucher-9f3c"
+          }
+        }
+      },
+      "VoucherCommitRequest": {
+        "type": "object",
+        "required": ["amountCents", "transactionId"],
+        "properties": {
+          "providerRef": {
+            "type": "string",
+            "description": "The value you returned from the check response (if any). Echoed back so you can look up the original reservation by your own identifier."
+          },
+          "amountCents": {
+            "type": "integer",
+            "description": "Karma's reserved amount. Always equals the `discountAmountCents` you returned from check, capped at the cart total."
+          },
+          "transactionId": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Karma-generated reservation identifier in the format `res_<32 hex chars>`. The same value is used for both commit and reactivate of a given reservation. **Your endpoint MUST dedupe by this value.**",
+            "example": "res_2f8a1d4b9e7c4f3e8b1a6c2d3e4f5a6b"
+          }
+        }
+      },
+      "VoucherOkResponse": {
+        "type": "object",
+        "required": ["ok"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [true] }
+        }
+      },
+      "VoucherErrorResponse": {
+        "type": "object",
+        "required": ["ok", "error"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [false] },
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "VOUCHER_NOT_FOUND",
+                  "VOUCHER_EXPIRED",
+                  "VOUCHER_ALREADY_COMMITTED",
+                  "VOUCHER_INSUFFICIENT_VALUE",
+                  "VOUCHER_NOT_ACTIVE",
+                  "INVALID_REQUEST",
+                  "PROVIDER_ERROR"
+                ],
+                "description": "Karma surfaces this code directly to the guest-facing checkout UI. Pick the most specific code that applies. `PROVIDER_ERROR` should be your last resort."
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable explanation. Not shown to the guest verbatim, but logged by Karma."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

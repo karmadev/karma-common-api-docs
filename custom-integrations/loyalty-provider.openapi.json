@@ -1,0 +1,472 @@
+{
+  "tag": {
+    "name": "Custom Loyalty Provider",
+    "description": "If your restaurant runs its own loyalty program, Karma can forward member identification, point accrual, and reward redemption to your URLs instead of Karma's native loyalty system. You implement six HTTPS endpoints; Karma calls them across a guest's loyalty lifecycle.\n\n> **Status: forward-looking spec.** The `LoyaltyProvider` interface exists in karma-common-api today and is implemented by `KarmaLoyaltyProvider`. The `custom` variant has not yet shipped — this document is the contract Karma will commit to. The endpoint URLs and request/response shapes will not change once implemented; only the configuration UI in Karma is still being added.\n\n## When this is used\n\nA Karma operator enables the `custom` loyalty provider on a specific restaurant location. The restaurant (or its IT vendor) owns the loyalty database, and Karma becomes the point-of-sale client that asks your system who a member is, how many points they have, and what they can redeem.\n\nKarma supports multiple loyalty provider types; this document covers the `custom` type only.\n\n## Lifecycle\n\n1. A guest identifies at the till (scans a card, enters a phone number). Karma calls **lookup**.\n2. A new guest signs up. Karma calls **enroll** to register them in your program.\n3. After a successful purchase, Karma calls **award** to credit points.\n4. The guest opens their loyalty screen. Karma calls **account** to show balance and tier.\n5. The guest browses rewards. Karma calls **rewards** to list what they can claim.\n6. The guest taps a reward. Karma calls **redeem** to spend their points.\n\n## What you implement\n\nSix HTTPS endpoints of your choosing. The URLs do not need to share a hostname, a path prefix, or a deployment. You give Karma six absolute URLs when the integration is configured.\n\n## What you don't need\n\nNo inbound callbacks to Karma. No HMAC request signing (Karma does not sign outbound requests today). No Karma-specific SDK, library, or client certificate. Plain HTTPS, JSON in, JSON out, optional Basic Auth or custom header auth.\n\n## What you do need\n\nIdempotency on **award** and **redeem** — if Karma retries a request with the same `transactionId`, your endpoint must not double-credit or double-spend points. See **Idempotency** below.\n\n## Authentication & security\n\n**HTTPS required.** Every URL you give Karma must begin with `https://`. Plain `http://` URLs are rejected by Karma's SSRF guard at configuration time and at each outbound request. Karma also blocks URLs that resolve to private or loopback addresses (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fe80::/10`).\n\n**Auth modes (pick one per integration; applies to all six endpoints):**\n\n| Mode | Karma sends | You verify |\n|------|-------------|------------|\n| `none` | No `Authorization` header | Use only if your endpoints are IP-restricted |\n| `basic` | `Authorization: Basic base64(username:password)` | Compare decoded credential to your stored value |\n| `headers` | Any custom headers you configured (e.g. `X-Api-Key`) | Compare each header value to your stored secret |\n\nAuth credentials (passwords, header values) are stored encrypted at rest (AES-256-CBC) and decrypted in memory only when a request is about to be sent. They are never written to logs.\n\n**No HMAC signing yet.** Karma does not currently sign outbound requests. If your compliance requirements call for HMAC-SHA256 request signatures, raise it with Karma support.\n\n## Idempotency & retries\n\n| Endpoint | Idempotency requirement | How |\n|----------|-------------------------|-----|\n| `lookup` | Naturally — it's a read | Same identifier → same `memberId` |\n| `enroll` | Recommended | If a request comes in for a `userId` you already enrolled, return the existing `memberId` |\n| `award` | **Required** | Dedupe by `transactionId` — must not double-credit |\n| `account` | Naturally — it's a read | Same `userId` → current balance |\n| `rewards` | Naturally — it's a read | Same `loyaltyProgramId` → current catalog |\n| `redeem` | **Required** | Dedupe by `transactionId` — must not double-spend |\n\n**Karma retries on:** HTTP 5xx, timeouts (5-second per-request budget), network errors (`ECONNREFUSED`, `ECONNRESET`, `ENOTFOUND`, `ECONNABORTED`, DNS failure).\n\n**Karma does NOT retry on 4xx** — those are treated as definitive rejections.\n\n**Retry count:** up to 2 retries (3 attempts total worst case), no backoff.\n\n`transactionId` format: `loy_<32 hex chars>` (max length 100). A given `transactionId` is unique to a single operation — `award` and `redeem` get different IDs.\n\n## All money in cents, points as integers\n\nMonetary values are integers in cents. Point values are whole integers. Karma will reject responses that contain fractional values. Round to the nearest whole point on the boundary.\n\n## Reference implementation\n\nA minimal Node.js + Express server implementing all six endpoints lives in [`custom-integrations/loyalty-provider.md`](https://github.com/karmadev/karma-common-api-docs/blob/main/custom-integrations/loyalty-provider.md#reference-implementation) on GitHub."
+  },
+  "paths": {
+    "/loyalty/lookup": {
+      "post": {
+        "tags": ["Custom Loyalty Provider"],
+        "summary": "Resolve a member by identifier",
+        "operationId": "customLoyaltyLookup",
+        "description": "Karma calls this when a guest presents a loyalty card or enters a phone number/email at the till. Look the identifier up and return your stable member ID.\n\n**Path:** Karma calls the absolute `lookupUrl` you configured per location.\n\n**Idempotency:** naturally idempotent (read).",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider — you choose the host and path" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoyaltyLookupRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either a member or an error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/LoyaltyLookupSuccess" },
+                    { "$ref": "#/components/schemas/LoyaltyErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "found": {
+                    "value": { "ok": true, "memberId": "mbr_8f3c2a1d", "userId": 7536 }
+                  },
+                  "notFound": {
+                    "value": {
+                      "ok": false,
+                      "error": { "code": "MEMBER_NOT_FOUND", "message": "No member matches the supplied identifier" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loyalty/enroll": {
+      "post": {
+        "tags": ["Custom Loyalty Provider"],
+        "summary": "Register a new member",
+        "operationId": "customLoyaltyEnroll",
+        "description": "Karma calls this when a guest signs up to loyalty for the first time at a participating location.\n\n**Path:** Karma calls the absolute `enrollUrl` you configured per location.\n\n**Idempotency:** recommended. If a request arrives for a `userId` that is already enrolled, return the existing `memberId` rather than creating a duplicate.",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoyaltyEnrollRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either an enrolled member or an error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/LoyaltyEnrollSuccess" },
+                    { "$ref": "#/components/schemas/LoyaltyErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "enrolled": { "value": { "ok": true, "memberId": "mbr_8f3c2a1d", "pointsAwarded": 100 } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loyalty/award": {
+      "post": {
+        "tags": ["Custom Loyalty Provider"],
+        "summary": "Credit points after a purchase",
+        "operationId": "customLoyaltyAward",
+        "description": "Karma calls this once payment is confirmed for a transaction at a location with loyalty enabled.\n\n**Path:** Karma calls the absolute `awardUrl` you configured per location.\n\n**Idempotency:** required. Dedupe by `transactionId`.\n\n**Apply your own accrual rules to `purchaseAmountCents`.** Use `itemIds` if your program awards bonus points for specific products.",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoyaltyAwardRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either award details or an error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/LoyaltyAwardSuccess" },
+                    { "$ref": "#/components/schemas/LoyaltyErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "success": { "value": { "ok": true, "pointsAwarded": 125, "newBalance": 875, "tierChanged": false } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loyalty/account": {
+      "post": {
+        "tags": ["Custom Loyalty Provider"],
+        "summary": "Get a member's current state",
+        "operationId": "customLoyaltyGetAccount",
+        "description": "Karma calls this when a guest opens their loyalty screen, when a merchant looks them up at the till, or before showing a tier-gated reward.\n\n**Path:** Karma calls the absolute `accountUrl` you configured per location.\n\n**Idempotency:** naturally idempotent (read).",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoyaltyAccountRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either the member's account or an error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/LoyaltyAccountSuccess" },
+                    { "$ref": "#/components/schemas/LoyaltyErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "withTier": {
+                    "value": {
+                      "ok": true,
+                      "currentBalance": 875,
+                      "lifetimeEarned": 4320,
+                      "tierName": "Silver",
+                      "tierId": 2
+                    }
+                  },
+                  "noTier": {
+                    "value": {
+                      "ok": true,
+                      "currentBalance": 50,
+                      "lifetimeEarned": 50,
+                      "tierName": null,
+                      "tierId": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loyalty/rewards": {
+      "post": {
+        "tags": ["Custom Loyalty Provider"],
+        "summary": "List rewards a member can browse",
+        "operationId": "customLoyaltyListRewards",
+        "description": "Karma calls this when a guest opens the rewards catalog or when a merchant shows redemption options at the till.\n\n**Path:** Karma calls the absolute `rewardsUrl` you configured per location.\n\n**Idempotency:** naturally idempotent (read).\n\nReturn rewards in the order you want them displayed; Karma does not re-sort.",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoyaltyRewardsRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either the catalog or an error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/LoyaltyRewardsSuccess" },
+                    { "$ref": "#/components/schemas/LoyaltyErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "catalog": {
+                    "value": {
+                      "ok": true,
+                      "rewards": [
+                        {
+                          "rewardId": 101,
+                          "title": "Free filter coffee",
+                          "description": "Any size, any roast.",
+                          "pointsCost": 200,
+                          "category": "drink",
+                          "imageUrl": "https://your-cdn.example/rewards/coffee.png",
+                          "stockRemaining": null
+                        },
+                        {
+                          "rewardId": 102,
+                          "title": "10% off your next order",
+                          "description": "Capped at 30 SEK off.",
+                          "pointsCost": 500,
+                          "category": "discount",
+                          "imageUrl": null,
+                          "stockRemaining": 50
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loyalty/redeem": {
+      "post": {
+        "tags": ["Custom Loyalty Provider"],
+        "summary": "Spend points on a reward",
+        "operationId": "customLoyaltyRedeem",
+        "description": "Karma calls this when a guest taps Redeem on a reward in the catalog or when a merchant rings one up at the till.\n\n**Path:** Karma calls the absolute `redeemUrl` you configured per location.\n\n**Idempotency:** required. Dedupe by `transactionId`. On a duplicate, return the same success body (including the same `redemptionId` and `generatedCode`) — do NOT re-spend points.",
+        "servers": [
+          { "url": "https://your-domain.example.com", "description": "Your provider" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoyaltyRedeemRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Either redemption details or an error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/LoyaltyRedeemSuccess" },
+                    { "$ref": "#/components/schemas/LoyaltyErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "success": {
+                    "value": { "ok": true, "redemptionId": 88421, "generatedCode": "RDM-7K3A-92QX", "newBalance": 675 }
+                  },
+                  "insufficientPoints": {
+                    "value": {
+                      "ok": false,
+                      "error": { "code": "INSUFFICIENT_POINTS", "message": "Member balance is below the reward cost" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LoyaltyLookupRequest": {
+        "type": "object",
+        "required": ["locationId", "loyaltyProgramId", "identifier", "identifierType"],
+        "properties": {
+          "locationId": { "type": "integer", "description": "Karma location ID where the lookup is happening. Use to scope the search if your program is multi-tenant." },
+          "loyaltyProgramId": { "type": "integer", "description": "Karma loyalty program ID this lookup is for." },
+          "identifier": { "type": "string", "description": "The value the guest presented. Format depends on `identifierType`.", "example": "+46701234567" },
+          "identifierType": { "type": "string", "enum": ["phone", "card", "email"], "description": "Tells you how to interpret `identifier`." }
+        }
+      },
+      "LoyaltyLookupSuccess": {
+        "type": "object",
+        "required": ["ok", "memberId"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [true] },
+          "memberId": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Your stable identifier for this member. Karma stores this and uses it in subsequent requests for the same guest. Treat as opaque on Karma's side; you choose the format and length.",
+            "example": "mbr_8f3c2a1d"
+          },
+          "userId": {
+            "type": "integer",
+            "description": "The Karma user ID, if you have already linked this member to one. Omit if the member is anonymous in your system."
+          }
+        }
+      },
+      "LoyaltyEnrollRequest": {
+        "type": "object",
+        "required": ["userId", "loyaltyProgramId", "locationId"],
+        "properties": {
+          "userId": { "type": "integer", "description": "Karma user ID of the guest being enrolled. Store this so you can link your member back to Karma." },
+          "loyaltyProgramId": { "type": "integer", "description": "Karma loyalty program ID being joined." },
+          "locationId": { "type": "integer", "description": "Location where enrollment is happening. Useful for source attribution." }
+        }
+      },
+      "LoyaltyEnrollSuccess": {
+        "type": "object",
+        "required": ["ok", "memberId", "pointsAwarded"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [true] },
+          "memberId": { "type": "string", "maxLength": 100, "description": "Your stable identifier for the new member.", "example": "mbr_8f3c2a1d" },
+          "pointsAwarded": { "type": "integer", "minimum": 0, "description": "Signup bonus points credited as part of enrollment. Return `0` if your program does not give a signup bonus." }
+        }
+      },
+      "LoyaltyAwardRequest": {
+        "type": "object",
+        "required": ["userId", "loyaltyProgramId", "purchaseId", "purchaseAmountCents", "itemIds", "transactionId"],
+        "properties": {
+          "userId": { "type": "integer", "description": "Karma user ID who made the purchase." },
+          "loyaltyProgramId": { "type": "integer", "description": "Karma loyalty program ID to credit." },
+          "purchaseId": { "type": "integer", "description": "Karma purchase ID this award is for. Useful for reconciliation." },
+          "purchaseAmountCents": { "type": "integer", "minimum": 0, "description": "Total amount paid, in cents. Apply your accrual rules to this value." },
+          "itemIds": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Inventory item IDs included in the purchase. Use these if your program awards bonus points for specific products."
+          },
+          "transactionId": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Karma-generated identifier in the format `loy_<32 hex chars>`. **Your endpoint MUST dedupe by this value.**",
+            "example": "loy_2f8a1d4b9e7c4f3e8b1a6c2d3e4f5a6b"
+          }
+        }
+      },
+      "LoyaltyAwardSuccess": {
+        "type": "object",
+        "required": ["ok", "pointsAwarded", "newBalance", "tierChanged"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [true] },
+          "pointsAwarded": { "type": "integer", "minimum": 0, "description": "Points credited for this purchase. May be `0` if the purchase didn't qualify." },
+          "newBalance": { "type": "integer", "minimum": 0, "description": "Member's total spendable point balance after this award." },
+          "tierChanged": { "type": "boolean", "description": "Whether this award caused the member to move up or down a tier. Karma uses this to refresh tier-related UI." }
+        }
+      },
+      "LoyaltyAccountRequest": {
+        "type": "object",
+        "required": ["userId", "loyaltyProgramId"],
+        "properties": {
+          "userId": { "type": "integer", "description": "Karma user ID to fetch." },
+          "loyaltyProgramId": { "type": "integer", "description": "Loyalty program to fetch the account for." }
+        }
+      },
+      "LoyaltyAccountSuccess": {
+        "type": "object",
+        "required": ["ok", "currentBalance", "lifetimeEarned", "tierName", "tierId"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [true] },
+          "currentBalance": { "type": "integer", "minimum": 0, "description": "Member's spendable point balance right now." },
+          "lifetimeEarned": { "type": "integer", "minimum": 0, "description": "Total points the member has ever earned. Return `currentBalance` if your program does not track lifetime separately." },
+          "tierName": { "type": "string", "nullable": true, "description": "Human-readable tier name (e.g. `\"Silver\"`). Return `null` if the program has no tiers or the member has not reached one." },
+          "tierId": { "type": "integer", "nullable": true, "description": "Your stable identifier for the tier. Return `null` whenever `tierName` is `null`." }
+        }
+      },
+      "LoyaltyRewardsRequest": {
+        "type": "object",
+        "required": ["loyaltyProgramId"],
+        "properties": {
+          "loyaltyProgramId": { "type": "integer", "description": "The loyalty program whose catalog to return." }
+        }
+      },
+      "LoyaltyReward": {
+        "type": "object",
+        "required": ["rewardId", "title", "description", "pointsCost"],
+        "properties": {
+          "rewardId": { "type": "integer", "description": "Your stable identifier for the reward. Karma echoes this back on `redeem`." },
+          "title": { "type": "string", "maxLength": 80, "description": "Headline label shown to the guest." },
+          "description": { "type": "string", "maxLength": 500, "description": "Longer human-readable description." },
+          "pointsCost": { "type": "integer", "minimum": 0, "description": "Points the member must spend to redeem this reward." },
+          "category": { "type": "string", "description": "Free-form bucket for client-side filtering (e.g. `drink`, `food`, `discount`, `merchandise`). Karma displays this verbatim if present." },
+          "imageUrl": { "type": "string", "format": "uri", "nullable": true, "description": "Absolute HTTPS URL of a preview image. Return `null` if you don't host artwork." },
+          "stockRemaining": { "type": "integer", "nullable": true, "minimum": 0, "description": "How many of this reward are still available globally. Return `null` if the reward has no stock cap." }
+        }
+      },
+      "LoyaltyRewardsSuccess": {
+        "type": "object",
+        "required": ["ok", "rewards"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [true] },
+          "rewards": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/LoyaltyReward" },
+            "description": "Zero or more reward objects. Return an empty array if no rewards are currently active."
+          }
+        }
+      },
+      "LoyaltyRedeemRequest": {
+        "type": "object",
+        "required": ["userId", "loyaltyProgramId", "rewardId", "transactionId"],
+        "properties": {
+          "userId": { "type": "integer", "description": "Karma user ID redeeming the reward." },
+          "loyaltyProgramId": { "type": "integer", "description": "Loyalty program the reward belongs to." },
+          "rewardId": { "type": "integer", "description": "Reward being redeemed (one of the IDs you returned from `rewards`)." },
+          "transactionId": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Karma-generated identifier in the format `loy_<32 hex chars>`. **Your endpoint MUST dedupe by this value.**",
+            "example": "loy_3a9c4e5f1d2b8a7c6e0d4f2b1a3c5d7e"
+          }
+        }
+      },
+      "LoyaltyRedeemSuccess": {
+        "type": "object",
+        "required": ["ok", "redemptionId", "generatedCode", "newBalance"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [true] },
+          "redemptionId": { "type": "integer", "description": "Your stable identifier for this redemption. Karma stores this for receipts and refund flows." },
+          "generatedCode": { "type": "string", "maxLength": 50, "nullable": true, "description": "Redemption code the guest can present to staff (printed on a receipt or shown in-app). Return `null` if the reward applies automatically and no code is needed." },
+          "newBalance": { "type": "integer", "minimum": 0, "description": "Member's point balance after this redemption." }
+        }
+      },
+      "LoyaltyErrorResponse": {
+        "type": "object",
+        "required": ["ok", "error"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [false] },
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "MEMBER_NOT_FOUND",
+                  "MEMBER_ALREADY_ENROLLED",
+                  "INSUFFICIENT_POINTS",
+                  "REWARD_NOT_FOUND",
+                  "REWARD_OUT_OF_STOCK",
+                  "REWARD_NOT_ELIGIBLE",
+                  "PROGRAM_NOT_ACTIVE",
+                  "INVALID_REQUEST",
+                  "PROVIDER_ERROR"
+                ],
+                "description": "Karma surfaces this code directly to the guest-facing UI. Pick the most specific code that applies. `PROVIDER_ERROR` should be your last resort."
+              },
+              "message": { "type": "string", "description": "Human-readable explanation. Logged by Karma; not shown to the guest verbatim." }
+            }
+          }
+        }
+      }
+    }
+  }
+}

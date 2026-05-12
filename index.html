@@ -66,29 +66,47 @@
       })
       .catch(() => {});
 
-    const stripBack = (md) => md.replace(/^\s*\[← Back[^\]]*\]\([^)]*\)\s*\n+/, '');
-
     function loadScalar() {
       const s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
       document.body.appendChild(s);
     }
 
+    // Merge a partial OpenAPI fragment ({ tag, paths, components.schemas })
+    // into the live spec. Mutates `spec` in place.
+    function mergeFragment(spec, fragment) {
+      if (fragment.tag) {
+        spec.tags = spec.tags || [];
+        spec.tags.push(fragment.tag);
+      }
+      if (fragment.paths) {
+        spec.paths = spec.paths || {};
+        Object.assign(spec.paths, fragment.paths);
+      }
+      if (fragment.components && fragment.components.schemas) {
+        spec.components = spec.components || {};
+        spec.components.schemas = spec.components.schemas || {};
+        Object.assign(spec.components.schemas, fragment.components.schemas);
+      }
+    }
+
     Promise.all([
       fetch('./' + specPath).then(r => r.json()),
-      fetch('./custom-integrations/voucher-provider.md').then(r => r.text()),
-      fetch('./custom-integrations/loyalty-provider.md').then(r => r.text()),
+      fetch('./custom-integrations/voucher-provider.openapi.json').then(r => r.json()),
+      fetch('./custom-integrations/loyalty-provider.openapi.json').then(r => r.json()),
     ])
-      .then(([spec, voucherMd, loyaltyMd]) => {
-        const guideTags = [
-          { name: 'Custom Voucher Provider', description: stripBack(voucherMd) },
-          { name: 'Custom Loyalty Provider', description: stripBack(loyaltyMd) },
-        ];
-        spec.tags = (spec.tags || []).concat(guideTags);
+      .then(([spec, voucherFragment, loyaltyFragment]) => {
+        const existingTagNames = (spec.tags || []).map(t => t.name);
 
-        // Preserve existing sidebar exactly: do NOT touch x-tagGroups.
-        // Scalar will render every appended tag (with its description) as a
-        // sidebar entry alongside the existing operation tags.
+        mergeFragment(spec, voucherFragment);
+        mergeFragment(spec, loyaltyFragment);
+
+        // Group sidebar: keep existing 45 tags under "API Reference",
+        // put the new contracts under "Custom Integrations".
+        spec['x-tagGroups'] = [
+          { name: 'API Reference', tags: existingTagNames },
+          { name: 'Custom Integrations', tags: ['Custom Voucher Provider', 'Custom Loyalty Provider'] },
+        ];
 
         const ref = document.getElementById('api-reference');
         ref.dataset.configuration = JSON.stringify({ content: spec });
