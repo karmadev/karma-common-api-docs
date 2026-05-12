@@ -72,16 +72,33 @@
       document.body.appendChild(s);
     }
 
-    // Merge a partial OpenAPI fragment ({ tag, paths, components.schemas })
-    // into the live spec. Mutates `spec` in place.
+    // Merge a partial OpenAPI fragment into the live spec. Mutates `spec` in place.
+    // Supported fragment fields:
+    //   - tag: single tag definition (legacy custom-integrations format)
+    //   - tags: array of tag definitions (preferred)
+    //   - paths: paths object
+    //   - webhooks: OpenAPI 3.1 webhooks object (outbound event documentation)
+    //   - components.schemas: schemas object
+    //   - $karmaOverrides: top-level field overrides applied to the spec (e.g. openapi version)
     function mergeFragment(spec, fragment) {
+      if (fragment.$karmaOverrides) {
+        Object.assign(spec, fragment.$karmaOverrides);
+      }
       if (fragment.tag) {
         spec.tags = spec.tags || [];
         spec.tags.push(fragment.tag);
       }
+      if (Array.isArray(fragment.tags)) {
+        spec.tags = spec.tags || [];
+        for (const t of fragment.tags) spec.tags.push(t);
+      }
       if (fragment.paths) {
         spec.paths = spec.paths || {};
         Object.assign(spec.paths, fragment.paths);
+      }
+      if (fragment.webhooks) {
+        spec.webhooks = spec.webhooks || {};
+        Object.assign(spec.webhooks, fragment.webhooks);
       }
       if (fragment.components && fragment.components.schemas) {
         spec.components = spec.components || {};
@@ -94,17 +111,21 @@
       fetch('./' + specPath).then(r => r.json()),
       fetch('./custom-integrations/voucher-provider.openapi.json').then(r => r.json()),
       fetch('./custom-integrations/loyalty-provider.openapi.json').then(r => r.json()),
+      fetch('./webhook-events/webhook-events.openapi.json').then(r => r.json()),
     ])
-      .then(([spec, voucherFragment, loyaltyFragment]) => {
+      .then(([spec, voucherFragment, loyaltyFragment, webhookEventsFragment]) => {
         const existingTagNames = (spec.tags || []).map(t => t.name);
 
         mergeFragment(spec, voucherFragment);
         mergeFragment(spec, loyaltyFragment);
+        mergeFragment(spec, webhookEventsFragment);
 
-        // Group sidebar: keep existing 45 tags under "API Reference",
-        // put the new contracts under "Custom Integrations".
+        // Tags introduced by the webhook-events fragment that didn't exist in
+        // the base spec — fold them into the API Reference group.
+        const webhookEventsTagNames = (webhookEventsFragment.tags || []).map(t => t.name);
+
         spec['x-tagGroups'] = [
-          { name: 'API Reference', tags: existingTagNames },
+          { name: 'API Reference', tags: [...existingTagNames, ...webhookEventsTagNames] },
           { name: 'Custom Integrations', tags: ['Custom Voucher Provider', 'Custom Loyalty Provider'] },
         ];
 
@@ -113,7 +134,7 @@
         loadScalar();
       })
       .catch((err) => {
-        console.warn('Custom Integrations injection failed, loading plain spec:', err);
+        console.warn('Fragment injection failed, loading plain spec:', err);
         const ref = document.getElementById('api-reference');
         ref.dataset.url = './' + specPath;
         loadScalar();
