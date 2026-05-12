@@ -44,17 +44,14 @@
   <script id="api-reference"></script>
 
   <script>
-    // Determine which OpenAPI spec to load (default: latest)
     const params = new URLSearchParams(window.location.search);
     const specPath = params.get('spec') || 'latest/openapi.json';
-    const specBase = specPath.replace(/\/[^/]+$/, '');
 
     function switchVersion(version) {
       const path = version === 'latest' ? 'latest' : `versions/${version}`;
       window.location.href = `?spec=${path}/openapi.json`;
     }
 
-    // Populate version selector
     fetch('./versions/manifest.json')
       .then(r => r.json())
       .then(manifest => {
@@ -69,13 +66,14 @@
       })
       .catch(() => {});
 
-    // Strip the back-link line from standalone-page markdown so it doesn't
-    // appear inside the Scalar render.
     const stripBack = (md) => md.replace(/^\s*\[← Back[^\]]*\]\([^)]*\)\s*\n+/, '');
 
-    // Load the OpenAPI spec, splice in the Custom Integrations guides as
-    // tag-only sidebar entries grouped under "Custom Integrations", then hand
-    // the result to Scalar via inline content.
+    function loadScalar() {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
+      document.body.appendChild(s);
+    }
+
     Promise.all([
       fetch('./' + specPath).then(r => r.json()),
       fetch('./custom-integrations/voucher-provider.md').then(r => r.text()),
@@ -86,35 +84,21 @@
           { name: 'Custom Voucher Provider', description: stripBack(voucherMd) },
           { name: 'Custom Loyalty Provider', description: stripBack(loyaltyMd) },
         ];
-
         spec.tags = (spec.tags || []).concat(guideTags);
 
-        // Preserve any existing tag groups; append a "Custom Integrations"
-        // group that surfaces the two guide tags in the sidebar.
-        const existingGroups = spec['x-tagGroups'] || [];
-        spec['x-tagGroups'] = existingGroups.concat([
-          {
-            name: 'Custom Integrations',
-            tags: guideTags.map(t => t.name),
-          },
-        ]);
+        // Preserve existing sidebar exactly: do NOT touch x-tagGroups.
+        // Scalar will render every appended tag (with its description) as a
+        // sidebar entry alongside the existing operation tags.
 
         const ref = document.getElementById('api-reference');
         ref.dataset.configuration = JSON.stringify({ content: spec });
-
-        // Load Scalar after the spec is prepared so it picks up the inline content.
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
-        document.body.appendChild(s);
+        loadScalar();
       })
       .catch((err) => {
-        // If guide fetch fails, fall back to plain spec so the API ref still loads.
-        console.warn('Failed to inject custom integration guides, falling back:', err);
+        console.warn('Custom Integrations injection failed, loading plain spec:', err);
         const ref = document.getElementById('api-reference');
         ref.dataset.url = './' + specPath;
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference';
-        document.body.appendChild(s);
+        loadScalar();
       });
   </script>
 </body>
