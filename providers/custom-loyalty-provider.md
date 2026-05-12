@@ -1,0 +1,618 @@
+# Custom Loyalty Provider — Wire Contract
+
+If your restaurant runs its own loyalty program, Karma can forward member identification, point accrual, and reward redemption to your URLs instead of Karma's native loyalty system. This document is everything a backend engineer needs to implement the six HTTP endpoints Karma will call.
+
+> **Status: forward-looking spec.** The custom loyalty provider is contracted in the codebase (`LoyaltyProvider` interface in `karma-common-api`) but no `custom` implementation has shipped yet. This document is the contract Karma will commit to before implementation lands. If you build against this spec today, the endpoint URLs and request/response shapes will not change — only the configuration UI in Karma is still being added.
+
+## Overview
+
+When a location is configured with the `custom` loyalty provider, Karma stops awarding and redeeming points against its own database and instead calls six HTTPS endpoints that you host. Every loyalty operation a guest or merchant triggers — looking up a member at the till, awarding points after a purchase, redeeming a reward at checkout — becomes an outbound request from Karma to your service.
+
+**When this is used.** A Karma operator enables the `custom` loyalty provider on a specific restaurant location. The restaurant (or the customer's IT vendor) owns the loyalty database, and Karma becomes the point-of-sale client that asks your system who a member is, how many points they have, and what they can redeem.
+
+**What Karma does.** Across a guest's lifecycle:
+
+1. When a guest identifies at the till (scans a card, enters a phone number), Karma calls your `lookupUrl` to resolve them to a member.
+2. When a new guest signs up, Karma calls your `enrollUrl` to register them in your program.
+3. After a successful purchase, Karma calls your `awardUrl` to credit points.
+4. When the guest opens their loyalty screen, Karma calls your `accountUrl` to show their current balance and tier.
+5. When they browse rewards, Karma calls your `rewardsUrl` to list what they can claim.
+6. When they redeem a reward, Karma calls your `redeemUrl` to spend their points.
+
+**What you implement.** Six HTTPS endpoints of your choosing. The URLs do not need to share a hostname, a path prefix, or a deployment. You give Karma six absolute URLs when the integration is configured.
+
+**What you don't need.** No inbound callbacks to Karma. No HMAC request signing (Karma does not sign outbound requests today). No Karma-specific SDK, library, or client certificate. Plain HTTPS, JSON in, JSON out, optional Basic Auth or custom header auth.
+
+**What you do need.** Idempotency on `award` and `redeem` — if Karma retries a request with the same `transactionId`, your endpoint must not double-credit or double-spend points. See "Idempotency & Retries" below.
+
+Karma has multiple loyalty provider types; this document covers the `custom` type only.
+
+## Endpoints
+
+You implement six endpoints. Each accepts a JSON request body over HTTPS and returns a JSON response. The URLs are configured per location in Karma and may live on different hosts.
+
+All six endpoints:
+
+- Use HTTP method **POST**.
+- Require the header `Content-Type: application/json`.
+- Must respond within **5 seconds**. Slower responses will be treated as timeouts and retried.
+- Return JSON with a top-level `ok` boolean indicating success or failure.
+
+### POST {lookupUrl}
+
+Resolve a member by their identifier. Karma calls this when a guest presents a loyalty card or enters a phone number/email at the till. You look the identifier up in your system and return the member's stable ID.
+
+**Request body:**
+
+```json
+{
+  "locationId": 100,
+  "loyaltyProgramId": 42,
+  "identifier": "+46701234567",
+  "identifierType": "phone"
+}
+```
+
+**Fields:**
+
+- `locationId` (integer, required) — the Karma location ID where the lookup is happening. Use this to scope the search if your program is multi-tenant.
+- `loyaltyProgramId` (integer, required) — the Karma loyalty program ID this lookup is for. Useful if you serve multiple programs from one endpoint.
+- `identifier` (string, required) — the value the guest presented. The format depends on `identifierType`.
+- `identifierType` (enum, required) — one of `phone`, `card`, `email`. Tells you how to interpret `identifier`.
+
+**Success response (HTTP 200):**
+
+```json
+{
+  "ok": true,
+  "memberId": "mbr_8f3c2a1d",
+  "userId": 7536
+}
+```
+
+**Fields:**
+
+- `ok` (boolean, required) — must be `true` on success.
+- `memberId` (string, required) — your stable identifier for this member. Karma stores this and uses it in all subsequent requests for the same guest. Treat as opaque on Karma's side; you choose the format and length (max 100 chars).
+- `userId` (integer, optional) — the Karma user ID, if you have already linked this member to one. Karma uses this to keep its records in sync; omit if the member is anonymous in your system.
+
+**Error response (HTTP 200 or 4xx):**
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "MEMBER_NOT_FOUND",
+    "message": "No member matches the supplied identifier"
+  }
+}
+```
+
+You may return the error body with either HTTP 200 or an appropriate 4xx status code (400, 404, 409, 422) — Karma inspects the JSON body regardless. Karma will **not** retry on 4xx responses; the error is treated as a definitive rejection. See "Error Codes" below for the allowed `code` values.
+
+### POST {enrollUrl}
+
+Register a new member in your program. Karma calls this when a guest signs up to loyalty for the first time at a participating location.
+
+**Request body:**
+
+```json
+{
+  "userId": 7536,
+  "loyaltyProgramId": 42,
+  "locationId": 100
+}
+```
+
+**Fields:**
+
+- `userId` (integer, required) — the Karma user ID of the guest being enrolled. Store this so you can link your member back to Karma.
+- `loyaltyProgramId` (integer, required) — the Karma loyalty program ID being joined.
+- `locationId` (integer, required) — the location where enrollment is happening. Useful for source attribution.
+
+**Success response (HTTP 200):**
+
+```json
+{
+  "ok": true,
+  "memberId": "mbr_8f3c2a1d",
+  "pointsAwarded": 100
+}
+```
+
+**Fields:**
+
+- `ok` (boolean, required) — must be `true` on success.
+- `memberId` (string, required) — your stable identifier for the new member, same format as returned by `lookup`.
+- `pointsAwarded` (integer, required) — any signup bonus points credited as part of enrollment. Return `0` if your program does not give a signup bonus.
+
+**Error response:** same `{ ok: false, error: { code, message } }` shape as lookup. See "Error Codes".
+
+### POST {awardUrl}
+
+Credit points after a purchase. Karma calls this once payment is confirmed for a transaction at a location with loyalty enabled.
+
+**Request body:**
+
+```json
+{
+  "userId": 7536,
+  "loyaltyProgramId": 42,
+  "purchaseId": 9182734,
+  "purchaseAmountCents": 12500,
+  "itemIds": [4711, 4712, 4715],
+  "transactionId": "loy_2f8a1d4b9e7c4f3e8b1a6c2d3e4f5a6b"
+}
+```
+
+**Fields:**
+
+- `userId` (integer, required) — the Karma user ID who made the purchase.
+- `loyaltyProgramId` (integer, required) — the Karma loyalty program ID to credit.
+- `purchaseId` (integer, required) — the Karma purchase ID this award is for. Useful for reconciliation and for echoing back to the guest in your system.
+- `purchaseAmountCents` (integer, required) — the total amount paid in cents. See "Why cents?" below. Apply your accrual rules (e.g. "1 point per 10 cents") to this value.
+- `itemIds` (array of integers, required) — the inventory item IDs included in the purchase. Use these if your program awards bonus points for specific products.
+- `transactionId` (string, required) — a Karma-generated identifier. **Your endpoint MUST dedupe by this value.** See "Idempotency & Retries" below.
+
+**Success response (HTTP 200):**
+
+```json
+{
+  "ok": true,
+  "pointsAwarded": 125,
+  "newBalance": 875,
+  "tierChanged": false
+}
+```
+
+**Fields:**
+
+- `ok` (boolean, required) — must be `true` on success.
+- `pointsAwarded` (integer, required) — how many points were credited for this purchase. May be `0` if the purchase didn't qualify (e.g. all items excluded from accrual).
+- `newBalance` (integer, required) — the member's total point balance after this award.
+- `tierChanged` (boolean, required) — whether this award caused the member to move up or down a tier. Karma uses this to decide whether to refresh tier-related UI.
+
+**Error response:** same `{ ok: false, error: { code, message } }` shape as lookup.
+
+### POST {accountUrl}
+
+Get the member's current loyalty state. Karma calls this when a guest opens their loyalty screen, when a merchant looks them up at the till, or before showing a tier-gated reward.
+
+**Request body:**
+
+```json
+{
+  "userId": 7536,
+  "loyaltyProgramId": 42
+}
+```
+
+**Fields:**
+
+- `userId` (integer, required) — the Karma user ID to fetch.
+- `loyaltyProgramId` (integer, required) — the loyalty program to fetch the account for.
+
+**Success response (HTTP 200):**
+
+```json
+{
+  "ok": true,
+  "currentBalance": 875,
+  "lifetimeEarned": 4320,
+  "tierName": "Silver",
+  "tierId": 2
+}
+```
+
+**Fields:**
+
+- `ok` (boolean, required) — must be `true` on success.
+- `currentBalance` (integer, required) — the member's spendable point balance right now.
+- `lifetimeEarned` (integer, required) — the total points the member has ever earned (for tier calculation displays). Return `currentBalance` if your program does not track lifetime separately.
+- `tierName` (string or null, required) — the human-readable tier name (e.g. `"Silver"`). Return `null` if the program has no tiers or the member has not reached one.
+- `tierId` (integer or null, required) — your stable identifier for the tier. Return `null` whenever `tierName` is `null`. Karma stores this for downstream filtering.
+
+**Error response:** same `{ ok: false, error: { code, message } }` shape as lookup.
+
+### POST {rewardsUrl}
+
+List rewards the member can browse and redeem. Karma calls this when a guest opens the rewards catalog or when a merchant shows redemption options at the till.
+
+**Request body:**
+
+```json
+{
+  "loyaltyProgramId": 42
+}
+```
+
+**Fields:**
+
+- `loyaltyProgramId` (integer, required) — the loyalty program whose catalog to return.
+
+**Success response (HTTP 200):**
+
+```json
+{
+  "ok": true,
+  "rewards": [
+    {
+      "rewardId": 101,
+      "title": "Free filter coffee",
+      "description": "Any size, any roast.",
+      "pointsCost": 200,
+      "category": "drink",
+      "imageUrl": "https://your-cdn.example/rewards/coffee.png",
+      "stockRemaining": null
+    },
+    {
+      "rewardId": 102,
+      "title": "10% off your next order",
+      "description": "Capped at 30 SEK off.",
+      "pointsCost": 500,
+      "category": "discount",
+      "imageUrl": null,
+      "stockRemaining": 50
+    }
+  ]
+}
+```
+
+**Fields:**
+
+- `ok` (boolean, required) — must be `true` on success.
+- `rewards` (array, required) — zero or more reward objects. Return an empty array if no rewards are currently active.
+- `rewards[].rewardId` (integer, required) — your stable identifier for the reward. Karma echoes this back on `redeem`.
+- `rewards[].title` (string, required) — the headline label shown to the guest. Keep under 80 characters.
+- `rewards[].description` (string, required) — a longer human-readable description. Keep under 500 characters.
+- `rewards[].pointsCost` (integer, required) — how many points the member must spend to redeem this reward.
+- `rewards[].category` (string, optional) — a free-form bucket for client-side filtering (e.g. `"drink"`, `"food"`, `"discount"`, `"merchandise"`). Karma displays this verbatim if present.
+- `rewards[].imageUrl` (string or null, optional) — absolute HTTPS URL of a preview image. Return `null` if you don't host artwork.
+- `rewards[].stockRemaining` (integer or null, optional) — how many of this reward are still available globally. Return `null` if the reward has no stock cap.
+
+Return rewards in the order you want them displayed; Karma does not re-sort.
+
+**Error response:** same `{ ok: false, error: { code, message } }` shape as lookup.
+
+### POST {redeemUrl}
+
+Spend points on a reward. Karma calls this when a guest taps "Redeem" on a reward in the catalog or when a merchant rings one up at the till.
+
+**Request body:**
+
+```json
+{
+  "userId": 7536,
+  "loyaltyProgramId": 42,
+  "rewardId": 101,
+  "transactionId": "loy_3a9c4e5f1d2b8a7c6e0d4f2b1a3c5d7e"
+}
+```
+
+**Fields:**
+
+- `userId` (integer, required) — the Karma user ID redeeming the reward.
+- `loyaltyProgramId` (integer, required) — the loyalty program the reward belongs to.
+- `rewardId` (integer, required) — the reward being redeemed (one of the IDs you returned from `rewards`).
+- `transactionId` (string, required) — a Karma-generated identifier. **Your endpoint MUST dedupe by this value.** See "Idempotency & Retries" below.
+
+**Success response (HTTP 200):**
+
+```json
+{
+  "ok": true,
+  "redemptionId": 88421,
+  "generatedCode": "RDM-7K3A-92QX",
+  "newBalance": 675
+}
+```
+
+**Fields:**
+
+- `ok` (boolean, required) — must be `true` on success.
+- `redemptionId` (integer, required) — your stable identifier for this redemption. Karma stores this for receipts and refund flows.
+- `generatedCode` (string or null, required) — a redemption code the guest can present to staff (e.g. printed on a receipt or shown in-app). Return `null` if the reward applies automatically and no code is needed. Max 50 characters.
+- `newBalance` (integer, required) — the member's point balance after this redemption.
+
+**Error response:** same `{ ok: false, error: { code, message } }` shape as lookup.
+
+---
+
+**All prices and points are integers. Never return fractional values.** Karma stores money as integer cents and points as integer counts to avoid floating-point rounding errors. If your internal system uses major-unit currency or fractional points, convert on the boundary: multiply by 100 on the way in for cents, round to the nearest whole number for points. Karma will reject responses that contain fractional values.
+
+## Error Codes
+
+When your endpoint needs to reject a request, return an error body with a `code` field chosen from this fixed set. Karma forwards the chosen `code` directly to the guest-facing UI, so pick the most specific one that applies.
+
+| Code | When to return |
+|------|----------------|
+| MEMBER_NOT_FOUND | The supplied `identifier` (lookup) or `userId` (other ops) does not map to a member in your system |
+| MEMBER_ALREADY_ENROLLED | A `enroll` request was made for a member who is already in the program |
+| INSUFFICIENT_POINTS | The member's balance is too low to redeem the requested reward |
+| REWARD_NOT_FOUND | The supplied `rewardId` does not exist or has been retired |
+| REWARD_OUT_OF_STOCK | The reward exists but no units are available right now |
+| REWARD_NOT_ELIGIBLE | The member exists but is not eligible for this reward (e.g. tier-gated, per-user cap reached, geographic restriction) |
+| PROGRAM_NOT_ACTIVE | The supplied `loyaltyProgramId` is paused, expired, or not configured for this location |
+| INVALID_REQUEST | The request body failed your validation (missing required field, bad type, etc.) |
+| PROVIDER_ERROR | Anything else — internal error, database unreachable, unexpected condition |
+
+Karma surfaces these codes directly to the guest-facing UI — choose the most specific code that applies. `PROVIDER_ERROR` should be your last resort: it signals to Karma that something went wrong on your side and the guest is told to try again later. The other eight codes let the guest take a specific action (try a different code, give up, contact support).
+
+## Authentication & Security
+
+### HTTPS is required
+
+Every URL you give Karma must begin with `https://`. Plain `http://` URLs are rejected by Karma's SSRF guard at configuration time and at each outbound request. No exceptions. If you need to test from a development machine, use a TLS-terminating tunnel such as `ngrok` or Cloudflare Tunnel.
+
+Karma also blocks URLs that resolve to private or loopback addresses (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fe80::/10`). Your endpoints must be reachable from the public internet.
+
+### Supported auth modes
+
+Karma supports three authentication modes. You pick one per integration and Karma applies it to every outbound request across all six endpoints.
+
+| Mode | Karma sends | You verify |
+|------|-------------|------------|
+| None | No `Authorization` header | Use only if your endpoints are already IP-restricted (see below) |
+| Basic | `Authorization: Basic base64(username:password)` | Compare the decoded credential to your stored username/password |
+| Custom headers | Any named headers you configured in Karma (e.g. `X-Api-Key: <value>`) | Compare each header value to your stored secret |
+
+The auth credentials (password, header values) are stored encrypted at rest in Karma's database (AES-256-CBC) and decrypted in memory only when a request is about to be sent. They are never written to logs.
+
+### IP allowlisting (recommended in addition to auth)
+
+Karma's outbound traffic originates from Google Cloud Platform. The exact egress IP ranges rotate over time; if you need a fixed IP for your firewall allowlist, contact Karma support and we can arrange it. For self-serve setups, rely on HTTPS plus Basic Auth or header auth — that combination is sufficient for the vast majority of customers.
+
+### Secrets are never logged
+
+Karma decrypts your configured Basic Auth password and custom header secrets in memory only. They are never written to application logs, error logs, or request traces. If you rotate a secret, update it in Karma's integration config — no Karma redeploy is required.
+
+### No HMAC signing (yet)
+
+Karma does not currently sign outbound requests with a shared secret. Authentication relies on HTTPS plus the Basic Auth or custom header mode you configured. If your compliance requirements call for HMAC-SHA256 request signatures (as in the Standard Webhooks spec), raise it with Karma support — the feature is on the roadmap but not yet available.
+
+## Idempotency & Retries
+
+Your `award` and `redeem` endpoints must be safe to call more than once with the same request body, because Karma will retry on transport failures.
+
+### Which endpoints need to be idempotent
+
+| Endpoint | Idempotent? | How |
+|----------|-------------|-----|
+| `lookup` | Naturally — it's a read | Same identifier → same `memberId` |
+| `enroll` | Recommended | If a request comes in for a `userId` you already enrolled, return the existing `memberId` instead of creating a duplicate |
+| `award` | **Required** | Dedupe by `transactionId` — must not double-credit |
+| `account` | Naturally — it's a read | Same `userId` → current balance |
+| `rewards` | Naturally — it's a read | Same `loyaltyProgramId` → current catalog |
+| `redeem` | **Required** | Dedupe by `transactionId` — must not double-spend |
+
+### When Karma retries
+
+Karma automatically retries a request when it encounters:
+
+- **HTTP 5xx responses** (500, 502, 503, 504, etc.) — treated as transient server-side failures.
+- **Timeouts** — any request that does not receive a response within **5 seconds**.
+- **Network errors** — `ECONNREFUSED`, `ECONNRESET`, `ENOTFOUND`, `ECONNABORTED`, DNS failure.
+
+### When Karma does NOT retry
+
+Karma will **not** retry on 4xx responses. A 4xx means your server definitively rejected the request (member not found, insufficient points, etc.); retrying would be wasteful and wrong.
+
+### Retry count
+
+Up to **2 retries** per operation (so 3 attempts total, worst case). No exponential backoff between retries — Karma retries immediately. The entire retry window fits within the guest's checkout budget.
+
+### Idempotency contract for award and redeem
+
+Both `award` and `redeem` requests carry a `transactionId` in the body. **Your endpoint MUST dedupe by this value.** If you receive the same `transactionId` twice, treat it as the same operation — do NOT credit or spend points twice.
+
+The recommended implementation is:
+
+1. When an `award` (or `redeem`) arrives, look up `transactionId` in your database.
+2. If it's already there → respond with the same success body you returned the first time. The point balance does not change.
+3. If it's not there → process the operation, record the `transactionId` alongside the resulting balance, respond with success.
+
+A unique constraint on `transactionId` in your database is the simplest way to make this race-free.
+
+### What can go wrong without idempotency
+
+Worked example. Karma sends an `award` request crediting 125 points. Your server processes it successfully and the member's balance goes from 750 to 875. Your response packet is lost on the way back (network blip). Karma's 5-second timer fires. Karma retries. Your server has no idea it's a retry — you credit another 125 points. The member's balance is now 1,000 instead of 875. The next time the guest opens their app, they see a balance Karma doesn't know about and the numbers diverge for the rest of their loyalty lifetime.
+
+With proper dedup by `transactionId`, the retry is a no-op. Karma's retry behaviour is safe by construction.
+
+### How Karma generates `transactionId`
+
+Karma generates `transactionId` in the format `loy_<32 hex chars>` — the `loy_` prefix followed by a UUID-derived 32-character hex string (e.g. `loy_2f8a1d4b9e7c4f3e8b1a6c2d3e4f5a6b`). Treat it as opaque; the maximum length is 100 characters. A given `transactionId` is unique to a single operation — `award` and `redeem` get different IDs.
+
+## Reference Implementation
+
+A minimal Node.js server implementing all six endpoints, suitable as a starting point. Drop this into a file called `server.js`, install `express`, and run it locally.
+
+```javascript
+const express = require('express')
+const app = express()
+
+app.use(express.json())
+
+// Very simple Basic Auth middleware. Swap in your own auth as needed.
+const EXPECTED_USER = 'demouser'
+const EXPECTED_PASS = 'demopass'
+
+function requireBasicAuth(req, res, next) {
+  const header = req.get('Authorization') || ''
+  if (!header.startsWith('Basic ')) {
+    return res.status(401).json({ ok: false, error: { code: 'INVALID_REQUEST', message: 'Missing auth' } })
+  }
+  const decoded = Buffer.from(header.slice(6), 'base64').toString('utf8')
+  const [user, pass] = decoded.split(':')
+  if (user !== EXPECTED_USER || pass !== EXPECTED_PASS) {
+    return res.status(401).json({ ok: false, error: { code: 'INVALID_REQUEST', message: 'Bad auth' } })
+  }
+  next()
+}
+
+// In-memory stores. In production, back these with a real database
+// and a unique constraint on transactionId.
+const members = new Map()       // identifier -> { memberId, userId, balance, lifetime }
+const transactions = new Map()  // transactionId -> response body
+
+const REWARDS = [
+  { rewardId: 101, title: 'Free filter coffee', description: 'Any size.', pointsCost: 200, category: 'drink', imageUrl: null, stockRemaining: null },
+  { rewardId: 102, title: '10% off next order', description: 'Capped at 30 SEK.', pointsCost: 500, category: 'discount', imageUrl: null, stockRemaining: 50 },
+]
+
+app.post('/loyalty/lookup', requireBasicAuth, (req, res) => {
+  const { identifier } = req.body || {}
+  const member = members.get(identifier)
+  if (!member) {
+    return res.json({ ok: false, error: { code: 'MEMBER_NOT_FOUND', message: 'No such member' } })
+  }
+  return res.json({ ok: true, memberId: member.memberId, userId: member.userId })
+})
+
+app.post('/loyalty/enroll', requireBasicAuth, (req, res) => {
+  const { userId } = req.body || {}
+  const memberId = `mbr_${userId}`
+  members.set(String(userId), { memberId, userId, balance: 100, lifetime: 100 })
+  return res.json({ ok: true, memberId, pointsAwarded: 100 })
+})
+
+app.post('/loyalty/award', requireBasicAuth, (req, res) => {
+  const { userId, purchaseAmountCents, transactionId } = req.body || {}
+  if (!transactionId) {
+    return res.json({ ok: false, error: { code: 'INVALID_REQUEST', message: 'Missing transactionId' } })
+  }
+  // Idempotency: if we've seen this transactionId, return the same response.
+  if (transactions.has(transactionId)) {
+    return res.json(transactions.get(transactionId))
+  }
+  const member = members.get(String(userId))
+  if (!member) {
+    return res.json({ ok: false, error: { code: 'MEMBER_NOT_FOUND', message: 'No such member' } })
+  }
+  const points = Math.floor(purchaseAmountCents / 100) // 1 point per SEK
+  member.balance += points
+  member.lifetime += points
+  const body = { ok: true, pointsAwarded: points, newBalance: member.balance, tierChanged: false }
+  transactions.set(transactionId, body)
+  return res.json(body)
+})
+
+app.post('/loyalty/account', requireBasicAuth, (req, res) => {
+  const { userId } = req.body || {}
+  const member = members.get(String(userId))
+  if (!member) {
+    return res.json({ ok: false, error: { code: 'MEMBER_NOT_FOUND', message: 'No such member' } })
+  }
+  return res.json({
+    ok: true,
+    currentBalance: member.balance,
+    lifetimeEarned: member.lifetime,
+    tierName: null,
+    tierId: null,
+  })
+})
+
+app.post('/loyalty/rewards', requireBasicAuth, (req, res) => {
+  return res.json({ ok: true, rewards: REWARDS })
+})
+
+app.post('/loyalty/redeem', requireBasicAuth, (req, res) => {
+  const { userId, rewardId, transactionId } = req.body || {}
+  if (!transactionId) {
+    return res.json({ ok: false, error: { code: 'INVALID_REQUEST', message: 'Missing transactionId' } })
+  }
+  if (transactions.has(transactionId)) {
+    return res.json(transactions.get(transactionId))
+  }
+  const member = members.get(String(userId))
+  if (!member) {
+    return res.json({ ok: false, error: { code: 'MEMBER_NOT_FOUND', message: 'No such member' } })
+  }
+  const reward = REWARDS.find((r) => r.rewardId === rewardId)
+  if (!reward) {
+    return res.json({ ok: false, error: { code: 'REWARD_NOT_FOUND', message: 'No such reward' } })
+  }
+  if (member.balance < reward.pointsCost) {
+    return res.json({ ok: false, error: { code: 'INSUFFICIENT_POINTS', message: 'Not enough points' } })
+  }
+  member.balance -= reward.pointsCost
+  const body = {
+    ok: true,
+    redemptionId: Math.floor(Math.random() * 1_000_000),
+    generatedCode: `RDM-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    newBalance: member.balance,
+  }
+  transactions.set(transactionId, body)
+  return res.json(body)
+})
+
+app.listen(3000, () => console.log('Loyalty provider listening on :3000'))
+```
+
+### How to run it
+
+```
+npm init -y
+npm install express
+node server.js
+```
+
+### Example curl
+
+Enroll a new member:
+
+```bash
+curl -X POST http://localhost:3000/loyalty/enroll \
+  -H 'Content-Type: application/json' \
+  -u 'demouser:demopass' \
+  -d '{"userId":7536,"loyaltyProgramId":42,"locationId":100}'
+```
+
+Expected output:
+
+```json
+{"ok":true,"memberId":"mbr_7536","pointsAwarded":100}
+```
+
+Look them up by user ID (this demo keys members by userId):
+
+```bash
+curl -X POST http://localhost:3000/loyalty/lookup \
+  -H 'Content-Type: application/json' \
+  -u 'demouser:demopass' \
+  -d '{"locationId":100,"loyaltyProgramId":42,"identifier":"7536","identifierType":"phone"}'
+```
+
+Award points after a 125 SEK purchase:
+
+```bash
+curl -X POST http://localhost:3000/loyalty/award \
+  -H 'Content-Type: application/json' \
+  -u 'demouser:demopass' \
+  -d '{"userId":7536,"loyaltyProgramId":42,"purchaseId":9182734,"purchaseAmountCents":12500,"itemIds":[4711],"transactionId":"loy_2f8a1d4b9e7c4f3e8b1a6c2d3e4f5a6b"}'
+```
+
+Expected output:
+
+```json
+{"ok":true,"pointsAwarded":125,"newBalance":225,"tierChanged":false}
+```
+
+Run the same award twice with the same `transactionId` to verify idempotency — you should see the same response body both times, with the balance changing only once.
+
+Then redeem a reward:
+
+```bash
+curl -X POST http://localhost:3000/loyalty/redeem \
+  -H 'Content-Type: application/json' \
+  -u 'demouser:demopass' \
+  -d '{"userId":7536,"loyaltyProgramId":42,"rewardId":101,"transactionId":"loy_3a9c4e5f1d2b8a7c6e0d4f2b1a3c5d7e"}'
+```
+
+Expected output (your `redemptionId` and `generatedCode` will differ):
+
+```json
+{"ok":true,"redemptionId":482910,"generatedCode":"RDM-K7QA","newBalance":25}
+```
+
+Once this passes against `localhost`, deploy your implementation behind an HTTPS endpoint and configure the URLs in Karma. You are ready to accept live loyalty traffic.
