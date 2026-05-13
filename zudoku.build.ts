@@ -77,6 +77,37 @@ const webhooksToPaths = (spec: any) => {
   delete spec.webhooks;
 };
 
+// Zudoku 0.77's schema codegen corrupts the processed output when our merged
+// spec contains $refs (the base spec is fully dereferenced — has zero $refs —
+// but our fragments under specs/ still use them). The corruption manifests as
+// stray `};` mid-file followed by orphaned content. Workaround: inline-resolve
+// every #/components/schemas/X reference in each fragment before merging, so
+// the merged schema is also fully dereferenced and Zudoku's $ref machinery
+// stays out of the picture entirely.
+const inlineRefs = (fragment: Fragment): Fragment => {
+  const schemas = fragment.components?.schemas ?? {};
+  const resolve = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(resolve);
+    if (!node || typeof node !== "object") return node;
+    const obj = node as Record<string, unknown>;
+    const ref = obj.$ref;
+    if (typeof ref === "string" && ref.startsWith("#/components/schemas/")) {
+      const name = ref.slice("#/components/schemas/".length);
+      const target = schemas[name];
+      if (target) {
+        // Recursively resolve refs inside the target too; siblings (rare) win
+        // over the target's own keys, matching JSON Schema 2020-12 semantics.
+        const { $ref: _drop, ...siblings } = obj;
+        return { ...(resolve(target) as object), ...resolve(siblings) as object };
+      }
+    }
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) out[k] = resolve(v);
+    return out;
+  };
+  return resolve(fragment) as Fragment;
+};
+
 const karmaFragmentMerge = async ({ schema }: { schema: any }) => {
   const [voucher, loyalty, webhookEvents] = await Promise.all([
     readJson<Fragment>("voucher-provider.openapi.json"),
@@ -84,15 +115,22 @@ const karmaFragmentMerge = async ({ schema }: { schema: any }) => {
     readJson<Fragment>("webhook-events.openapi.json"),
   ]);
 
-  mergeFragment(schema, voucher);
-  mergeFragment(schema, loyalty);
-  mergeFragment(schema, webhookEvents);
+  // Clone the input schema before any mutation. Zudoku 0.77's pipeline appears
+  // to hold/iterate the passed-in schema concurrently with our mutations,
+  // producing character-level corruption in the generated output (truncated
+  // strings, bleed-through from unrelated scopes) once the spec gets large.
+  // Operating on a fresh clone sidesteps it.
+  const cloned: any = structuredClone(schema);
 
-  webhooksToPaths(schema);
+  mergeFragment(cloned, inlineRefs(voucher));
+  mergeFragment(cloned, inlineRefs(loyalty));
+  mergeFragment(cloned, inlineRefs(webhookEvents));
 
-  delete schema["x-tagGroups"];
+  webhooksToPaths(cloned);
 
-  return schema;
+  delete cloned["x-tagGroups"];
+
+  return cloned;
 };
 
 const buildConfig: ZudokuBuildConfig = {
