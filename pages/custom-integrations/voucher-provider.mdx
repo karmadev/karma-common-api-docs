@@ -35,7 +35,7 @@ All three endpoints:
 - Must respond within **5 seconds**. Slower responses will be treated as timeouts and retried.
 - Return JSON with a top-level `ok` boolean indicating success or failure.
 
-### POST {checkUrl}
+### POST `{checkUrl}`
 
 Validate a voucher code against the current cart and reserve its value. Karma calls this when a guest first enters a voucher code at checkout. You look the code up in your system, decide whether it applies to the cart, and return the discount amount.
 
@@ -105,7 +105,7 @@ Validate a voucher code against the current cart and reserve its value. Karma ca
 
 You may return the error body with either HTTP 200 or an appropriate 4xx status code (400, 404, 409, 422) — Karma inspects the JSON body regardless. Karma will **not** retry on 4xx responses; the error is treated as a definitive rejection. See "Error Codes" below for the allowed `code` values.
 
-### POST {commitUrl}
+### POST `{commitUrl}`
 
 Consume a previously reserved voucher. Karma calls this after the guest has successfully paid. Your endpoint should mark the voucher as used, decrement its remaining balance, or otherwise register the redemption in your system.
 
@@ -135,7 +135,7 @@ Consume a previously reserved voucher. Karma calls this after the guest has succ
 
 **Error response:** same `{ ok: false, error: { code, message } }` shape as check. See "Error Codes".
 
-### POST {reactivateUrl}
+### POST `{reactivateUrl}`
 
 Release a previously reserved voucher. Karma calls this when the guest cancels payment, closes the checkout flow, or the reservation times out before a commit lands. Your endpoint should undo the reservation — return the voucher to a usable state so the guest (or someone else) can apply it again.
 

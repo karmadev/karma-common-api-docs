@@ -38,7 +38,7 @@ All six endpoints:
 - Must respond within **5 seconds**. Slower responses will be treated as timeouts and retried.
 - Return JSON with a top-level `ok` boolean indicating success or failure.
 
-### POST {lookupUrl}
+### POST `{lookupUrl}`
 
 Resolve a member by their identifier. Karma calls this when a guest presents a loyalty card or enters a phone number/email at the till. You look the identifier up in your system and return the member's stable ID.
 
@@ -90,7 +90,7 @@ Resolve a member by their identifier. Karma calls this when a guest presents a l
 
 Always return errors as HTTP 200 with `ok: false` so Karma can inspect the body and surface a precise `code` to the UI. A 4xx status causes Karma to drop the body and report a generic `PROVIDER_ERROR` instead. See "Error Codes" below for the allowed `code` values.
 
-### POST {enrollUrl}
+### POST `{enrollUrl}`
 
 Register a new member in your program. Karma calls this when a guest signs up to loyalty for the first time at a participating location.
 
@@ -128,7 +128,7 @@ Register a new member in your program. Karma calls this when a guest signs up to
 
 **Error response:** same `{ ok: false, error: { code, message } }` shape as lookup. See "Error Codes".
 
-### POST {awardUrl}
+### POST `{awardUrl}`
 
 Credit points after a purchase. Karma calls this once payment is confirmed for a transaction at a location with loyalty enabled.
 
@@ -174,7 +174,7 @@ Credit points after a purchase. Karma calls this once payment is confirmed for a
 
 **Error response:** same `{ ok: false, error: { code, message } }` shape as lookup.
 
-### POST {accountUrl}
+### POST `{accountUrl}`
 
 Get the member's current loyalty state. Karma calls this when a guest opens their loyalty screen, when a merchant looks them up at the till, or before showing a tier-gated reward.
 
@@ -214,7 +214,7 @@ Get the member's current loyalty state. Karma calls this when a guest opens thei
 
 **Error response:** same `{ ok: false, error: { code, message } }` shape as lookup.
 
-### POST {rewardsUrl}
+### POST `{rewardsUrl}`
 
 List rewards the member can browse and redeem. Karma calls this when a guest opens the rewards catalog or when a merchant shows redemption options at the till.
 
@@ -274,7 +274,7 @@ Return rewards in the order you want them displayed; Karma does not re-sort.
 
 **Error response:** same `{ ok: false, error: { code, message } }` shape as lookup.
 
-### POST {redeemUrl}
+### POST `{redeemUrl}`
 
 Spend points on a reward. Karma calls this when a guest taps "Redeem" on a reward in the catalog or when a merchant rings one up at the till.
 
