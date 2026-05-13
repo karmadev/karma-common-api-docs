@@ -1,0 +1,17 @@
+{
+  "name": "karma-common-api-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Karma Common API documentation site — built with Zudoku",
+  "scripts": {
+    "dev": "zudoku dev",
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' zudoku build",
+    "preview": "zudoku build && npx serve dist"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zudoku": "^0.77.0"
+  }
+}

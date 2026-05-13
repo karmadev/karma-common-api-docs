@@ -1,0 +1,80 @@
+---
+title: Karma Common API
+description: Public REST API for the Karma restaurant platform
+---
+
+The Karma Common API is a centralized REST API for the Karma restaurant platform, providing secure access to core resources including inventory, orders, schedules, webhooks, and more.
+
+## Features
+
+- **API Key Authentication** — Simple, long-lived access with bcrypt-hashed keys
+- **Comprehensive Access Control** — Fine-grained permissions for all resources
+- **Rate Limiting** — Automatic rate limiting based on your API key tier
+- **Webhook Support** — Real-time event notifications via webhooks
+- **TypeScript SDK** — Official SDK for JavaScript/TypeScript applications
+
+## Quick Start
+
+Install the official TypeScript/JavaScript SDK:
+
+```bash
+npm install @karmalicious/karma-api-js
+```
+
+```typescript
+import { createKarmaClient } from "@karmalicious/karma-api-js";
+
+const client = createKarmaClient({
+  apiKey: "karma_live_your_api_key_here",
+  baseUrl: "https://common-api.karma.life",
+});
+
+const inventory = await client.inventory.getInventoryItems({
+  locationId: 100,
+  limit: 50,
+});
+```
+
+View the package on npm: [@karmalicious/karma-api-js](https://www.npmjs.com/package/@karmalicious/karma-api-js).
+
+## API Environments
+
+| Environment | Base URL |
+|-------------|----------|
+| Production | `https://common-api.karma.life` |
+| Beta | `https://common-api.beta.karma.life` |
+| Development | `https://common-api.development.karma.life` |
+
+## Authentication
+
+All endpoints require an API key in the `X-API-Key` header:
+
+```
+X-API-Key: karma_live_your_api_key_here
+```
+
+API keys can be managed through the Karma Merchant Dashboard.
+
+## Rate Limiting
+
+Rate limits are applied per API key based on your subscription tier:
+
+- **Standard** — 1,000 requests/hour
+- **Premium** — 10,000 requests/hour
+- **Unlimited** — 100,000 requests/hour
+
+Rate limit headers are included in all responses:
+
+- `X-RateLimit-Limit` — Total requests allowed
+- `X-RateLimit-Remaining` — Requests remaining
+- `X-RateLimit-Reset` — Unix timestamp when limit resets
+
+## Specification Downloads
+
+- JSON — [`/latest/openapi.json`](/latest/openapi.json)
+- YAML — [`/latest/openapi.yaml`](/latest/openapi.yaml)
+- All versions — [`/versions/manifest.json`](/versions/manifest.json)
+
+## Support
+
+For API support, contact [hello@karma.life](mailto:hello@karma.life).

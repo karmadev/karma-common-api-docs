@@ -90,7 +90,29 @@ npx orval --input https://docs.karma.life/latest/openapi.json
 | `/latest/openapi.json` | Always the latest version |
 | `/versions/v1/openapi.json` | Latest v1.x stable |
 
-See [versions/manifest.json](./versions/manifest.json) for the complete version history.
+See [public/versions/manifest.json](./public/versions/manifest.json) for the complete version history.
+
+## Local Development
+
+This site is built with [Zudoku](https://zudoku.dev) — a static-site generator for OpenAPI docs. All operations are pre-rendered to HTML at build time (no client-side spec hydration).
+
+```bash
+npm install
+npm run dev      # Local dev server with hot reload
+npm run build    # Produces static dist/ ready for GitHub Pages
+npm run preview  # Serve the built dist/ locally
+```
+
+Repo layout:
+
+| Path | Contents |
+|------|----------|
+| `zudoku.config.ts` | Site config, branding, navigation, multi-version `apis` array |
+| `zudoku.build.ts` | Build-time schema processor that merges custom-integration + webhook-event fragments into each version's spec and computes `x-tagGroups` |
+| `pages/` | Hand-written MDX pages (Introduction, Examples, Custom Integrations prose) |
+| `specs/` | OpenAPI fragments consumed only at build time (custom integrations, webhook events) |
+| `public/` | Assets served verbatim — preserves `/latest/openapi.json`, `/versions/...`, `/architecture.html`, `/CNAME` URLs |
+| `dist/` | Build output. Published to GitHub Pages by `.github/workflows/deploy.yml`. Gitignored. |
 
 ## Automatic Updates
 
