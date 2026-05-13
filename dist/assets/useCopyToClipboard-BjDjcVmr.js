@@ -1,0 +1,2 @@
+import{r as e}from"./chunk-CilyBKbf.js";import{t}from"./react-C7HJXoYM.js";var n=e(t(),1),r=(e=2e3)=>{let[t,r]=(0,n.useState)(!1);return[t,(0,n.useCallback)(t=>{navigator.clipboard.writeText(t),r(!0),setTimeout(()=>r(!1),e)},[e])]};export{r as t};
+//# sourceMappingURL=useCopyToClipboard-BjDjcVmr.js.map

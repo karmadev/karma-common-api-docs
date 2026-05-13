@@ -14,6 +14,10 @@ Thumbs.db
 # Node
 node_modules/
 
-# Zudoku / Vite build output
-dist/
+# Zudoku build cache
 .zudoku/
+
+# dist/ is intentionally tracked — see .github/workflows/deploy.yml.
+# Zudoku 0.77's CI build is flaky on our spec (intermittent codegen
+# corruption), so we build locally with `npm run build` and commit
+# the prerendered dist/ directly. CI just uploads it to Pages.

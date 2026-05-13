@@ -1,0 +1,2 @@
+import{t as e}from"./jsx-runtime-BcqRK4R-.js";var t=e(),n=e=>(0,t.jsxs)(`svg`,{xmlns:`http://www.w3.org/2000/svg`,viewBox:`0 0 24 24`,width:`1em`,height:`1em`,...e,children:[(0,t.jsx)(`title`,{children:`XML`}),(0,t.jsx)(`path`,{className:`fill-foreground`,d:`m12.89 3 1.96.4L11.11 21l-1.96-.4L12.89 3m6.7 9L16 8.41V5.58L22.42 12 16 18.41v-2.83L19.59 12M1.58 12 8 5.58v2.83L4.41 12 8 15.58v2.83L1.58 12Z`})]});export{n as default};
+//# sourceMappingURL=xml-BuIBMnQ_.js.map

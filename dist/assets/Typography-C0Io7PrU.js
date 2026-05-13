@@ -1,0 +1,2 @@
+import{t as e}from"./jsx-runtime-BcqRK4R-.js";import{t}from"./cn-DagfQA4x.js";var n=e(),r=`prose dark:prose-invert typography`,i=({className:e,...i})=>(0,n.jsx)(`div`,{className:t(r,e),...i});export{i as t};
+//# sourceMappingURL=Typography-C0Io7PrU.js.map

@@ -1,8 +1,14 @@
-name: Build & Deploy to GitHub Pages
+name: Deploy to GitHub Pages
+
+# Zudoku 0.77's build is flaky on our spec (intermittent codegen corruption
+# in node_modules/.zudoku/processed/), so we build the site locally with
+# `npm run build` and commit dist/ directly. This workflow just uploads the
+# prebuilt artifact to Pages — no build step.
 
 on:
   push:
     branches: [main]
+    paths: [dist/**, .github/workflows/deploy.yml]
   workflow_dispatch:
 
 permissions:
@@ -15,30 +21,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - run: npm ci
-
-      - run: npm run build
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
   deploy:
-    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
       - id: deployment
         uses: actions/deploy-pages@v4
