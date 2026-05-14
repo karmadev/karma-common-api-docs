@@ -77,6 +77,46 @@ const webhooksToPaths = (spec: any) => {
   delete spec.webhooks;
 };
 
+// Zudoku 0.77's `flattenAllOfProcessor` runs BEFORE our `karmaFragmentMerge`
+// (see node_modules/zudoku/src/vite/api/SchemaManager.ts), so any `allOf`
+// introduced by our merged-in fragments never gets flattened — and the
+// renderer skips webhook request-body schemas that are still raw `allOf`,
+// leaving the "Request Body" section empty. Our webhook events all use
+// `allOf: [WebhookEnvelope, {event-specific data shape}]`, so we flatten
+// that pattern here, after refs are inlined and before fragments are merged.
+const flattenAllOfDeep = (node: unknown): unknown => {
+  if (Array.isArray(node)) return node.map(flattenAllOfDeep);
+  if (!node || typeof node !== "object") return node;
+  const obj = node as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) out[k] = flattenAllOfDeep(v);
+  if (Array.isArray(out.allOf) && out.allOf.every((it) => {
+    const o = it as Record<string, unknown> | null;
+    return o && typeof o === "object" && (o.type === "object" || "properties" in o) && !("oneOf" in o) && !("anyOf" in o);
+  })) {
+    const merged: Record<string, unknown> = { type: "object" };
+    const props: Record<string, unknown> = {};
+    const required = new Set<string>();
+    let description: string | undefined;
+    let additionalProperties: unknown;
+    for (const item of out.allOf as Array<Record<string, unknown>>) {
+      if (typeof item.description === "string" && !description) description = item.description;
+      const itemProps = item.properties as Record<string, unknown> | undefined;
+      if (itemProps) Object.assign(props, itemProps);
+      const req = item.required;
+      if (Array.isArray(req)) for (const r of req) required.add(r as string);
+      if ("additionalProperties" in item) additionalProperties = item.additionalProperties;
+    }
+    if (description) merged.description = description;
+    if (Object.keys(props).length > 0) merged.properties = props;
+    if (required.size > 0) merged.required = Array.from(required);
+    if (additionalProperties !== undefined) merged.additionalProperties = additionalProperties;
+    const { allOf: _drop, ...siblings } = out;
+    return { ...merged, ...siblings };
+  }
+  return out;
+};
+
 // Zudoku 0.77's schema codegen corrupts the processed output when our merged
 // spec contains $refs (the base spec is fully dereferenced — has zero $refs —
 // but our fragments under specs/ still use them). The corruption manifests as
@@ -122,9 +162,9 @@ const karmaFragmentMerge = async ({ schema }: { schema: any }) => {
   // Operating on a fresh clone sidesteps it.
   const cloned: any = structuredClone(schema);
 
-  mergeFragment(cloned, inlineRefs(voucher));
-  mergeFragment(cloned, inlineRefs(loyalty));
-  mergeFragment(cloned, inlineRefs(webhookEvents));
+  mergeFragment(cloned, flattenAllOfDeep(inlineRefs(voucher)) as Fragment);
+  mergeFragment(cloned, flattenAllOfDeep(inlineRefs(loyalty)) as Fragment);
+  mergeFragment(cloned, flattenAllOfDeep(inlineRefs(webhookEvents)) as Fragment);
 
   webhooksToPaths(cloned);
 
