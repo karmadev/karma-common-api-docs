@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karma API Documentation</title>
+  <meta name="description" content="API documentation for the Karma platform">
+  <link rel="icon" href="https://karma.life/favicon.ico">
+  <style>
+    body { margin: 0; padding: 0; }
+    .version-selector {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: #1a1a2e;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+    }
+    .version-selector select {
+      background: #16213e;
+      color: #fff;
+      border: 1px solid #0f3460;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .version-selector label {
+      color: #e94560;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="version-selector">
+    <label for="version">API Version:</label>
+    <select id="version" onchange="switchVersion(this.value)">
+      <option value="latest">Latest</option>
+    </select>
+  </div>
+
+  <script id="api-reference" data-url="./latest/openapi.json"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+
+  <script>
+    // Load available versions
+    fetch('./versions/manifest.json')
+      .then(r => r.json())
+      .then(manifest => {
+        const select = document.getElementById('version');
+        manifest.versions.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          if (v === manifest.latest) opt.textContent += ' (latest)';
+          select.appendChild(opt);
+        });
+      })
+      .catch(() => console.log('Version manifest not found'));
+
+    function switchVersion(version) {
+      const path = version === 'latest' ? 'latest' : `versions/${version}`;
+      window.location.href = `?spec=${path}/openapi.json`;
+    }
+
+    // Handle version from URL
+    const params = new URLSearchParams(window.location.search);
+    const specUrl = params.get('spec');
+    if (specUrl) {
+      document.getElementById('api-reference').dataset.url = specUrl;
+    }
+  </script>
+</body>
+</html>
