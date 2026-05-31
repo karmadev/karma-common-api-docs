@@ -142,6 +142,7 @@ const config: ZudokuConfig = {
       type: "category",
       label: "Examples",
       items: [
+        "examples/place-an-order",
         "examples/nightly-sales-data",
         "examples/inventory-sync",
         "examples/realtime-webhooks",
