@@ -583,6 +583,33 @@
         }
       }
     },
+    "/api/v1/tabs/{tabId}/members/{memberId}/charge-card-on-file": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "tabId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "memberId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/v1/tabs/{tabId}/recent-purchase-intent": {
       "get": {
         "parameters": [
@@ -52025,7 +52052,7 @@
                   "description": {
                     "type": "string",
                     "nullable": true,
-                    "maxLength": 255,
+                    "maxLength": 500,
                     "description": "Item description"
                   },
                   "basePrice": {
@@ -53396,7 +53423,7 @@
                   "description": {
                     "type": "string",
                     "nullable": true,
-                    "maxLength": 255
+                    "maxLength": 500
                   },
                   "basePrice": {
                     "type": "number",
@@ -86408,7 +86435,7 @@
                 "properties": {
                   "weeklyHours": {
                     "type": "object",
-                    "description": "Opening hours for each day of the week. Days not provided will be left unchanged.",
+                    "description": "Opening hours for each day of the week. This is a FULL REPLACE: every PUT deletes all existing rules and re-inserts only what is sent here, so the caller must always send the complete week (and all exceptions). A day omitted from this object is dropped, not left unchanged.",
                     "properties": {
                       "monday": {
                         "type": "object",
@@ -88656,7 +88683,7 @@
                 "properties": {
                   "weeklyHours": {
                     "type": "object",
-                    "description": "Opening hours for each day of the week. Days not provided will be left unchanged.",
+                    "description": "Opening hours for each day of the week. This is a FULL REPLACE: every PUT deletes all existing rules and re-inserts only what is sent here, so the caller must always send the complete week (and all exceptions). A day omitted from this object is dropped, not left unchanged.",
                     "properties": {
                       "monday": {
                         "type": "object",
@@ -128111,6 +128138,681 @@
         }
       }
     },
+    "/api/v1/kitchen-dispatch-items": {
+      "get": {
+        "summary": "List kitchen dispatch items (KDS 2)",
+        "tags": [
+          "Orders"
+        ],
+        "description": "Returns a flat list of kitchen dispatch items with their parent kitchen-dispatch and tab context embedded, for the item-first KDS 2 display. The `state` filter targets the per-item state (kitchen_dispatch_items.item_state). Pagination is over root items; variant children always accompany their parent. All prices are in cents.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 200
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "description": "Item state(s) to include (single value or array)"
+          },
+          {
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              ]
+            },
+            "in": "query",
+            "name": "printerGroupIds",
+            "required": false,
+            "description": "Keep only items whose root belongs to one of these prep (printer) groups"
+          },
+          {
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "in": "query",
+            "name": "tabType",
+            "required": false,
+            "description": "Filter by tab type (e.g. table, takeaway)"
+          },
+          {
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "description": "Order channel/source: POS, ONLINE, QR, KIOSK"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "startDate",
+            "required": false,
+            "description": "ISO start of parent dispatch created_at range"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "endDate",
+            "required": false,
+            "description": "ISO end of parent dispatch created_at range"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "excludeAbortedTabs",
+            "required": false,
+            "description": "Hide items whose parent tab is aborted"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "kitchen_sort_order"
+              ]
+            },
+            "in": "query",
+            "name": "sort",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "in": "query",
+            "name": "order",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flat list of kitchen dispatch items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Flat list of kitchen dispatch items",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "totalPages": {
+                              "type": "integer"
+                            },
+                            "hasMore": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_INPUT",
+                    "message": "Invalid request parameters"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 5
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_API_KEY",
+                    "message": "Invalid API key provided"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 3
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INSUFFICIENT_PERMISSIONS",
+                    "message": "You do not have permission to access this resource"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 4
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Resource does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RESOURCE_NOT_FOUND",
+                    "message": "The requested resource was not found"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 2
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Rate limit exceeded. Please try again later."
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 1
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "An unexpected error occurred"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kitchen-dispatch-items/{id}": {
       "delete": {
         "summary": "Delete kitchen dispatch item",
@@ -130928,6 +131630,549 @@
         }
       }
     },
+    "/api/v1/kitchen-dispatch-items/advance": {
+      "post": {
+        "summary": "Advance kitchen dispatch items by ID (KDS 2)",
+        "tags": [
+          "Orders"
+        ],
+        "description": "Forward-only advance of explicit kitchen_dispatch_item IDs to a target item state. Item IDs may span multiple kitchen dispatches; each dispatch is locked and advanced independently, its latest_state re-derived from the new minimum item state, and the same SMS milestone + order.updated webhook side effects fire as the per-order advance endpoint. Held items (not_sent, staged_awaiting_payment, waiting_for_merge) and aborted items are never swept forward.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "itemIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "description": "Kitchen dispatch item UUIDs to advance"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "accepted",
+                      "in_preparation",
+                      "ready_to_deliver",
+                      "delivered",
+                      "rejected"
+                    ],
+                    "description": "Target item state"
+                  }
+                },
+                "required": [
+                  "itemIds",
+                  "state"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Advance applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Advance applied",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "itemsAdvanced": {
+                          "type": "integer"
+                        },
+                        "dispatches": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_INPUT",
+                    "message": "Invalid request parameters"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 5
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_API_KEY",
+                    "message": "Invalid API key provided"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 3
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INSUFFICIENT_PERMISSIONS",
+                    "message": "You do not have permission to access this resource"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 4
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Resource does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RESOURCE_NOT_FOUND",
+                    "message": "The requested resource was not found"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 2
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Rate limit exceeded. Please try again later."
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 1
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "An unexpected error occurred"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kitchen-dispatch-items/void-batch": {
       "post": {
         "summary": "Void one or more kitchen dispatch items",
@@ -131954,6 +133199,33 @@
                                 "nullable": true,
                                 "description": "Number of items in order"
                               },
+                              "totalVatAmountCents": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "Total VAT amount in cents. Only present for confirmed (paid) orders."
+                              },
+                              "vatBreakdown": {
+                                "type": "array",
+                                "nullable": true,
+                                "description": "VAT breakdown by rate. Only present for confirmed (paid) orders.",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "vatRateBasisPoints": {
+                                      "type": "number",
+                                      "description": "VAT rate in basis points (e.g. 2500 = 25%)"
+                                    },
+                                    "vatAmountCents": {
+                                      "type": "number",
+                                      "description": "VAT amount in cents at this rate"
+                                    }
+                                  },
+                                  "required": [
+                                    "vatRateBasisPoints",
+                                    "vatAmountCents"
+                                  ]
+                                }
+                              },
                               "message": {
                                 "type": "string",
                                 "nullable": true,
@@ -132109,6 +133381,12 @@
                                       "nullable": true,
                                       "description": "Item-level state (not_sent, pending, accepted, in_preparation, ready_to_deliver, delivered, rejected)"
                                     },
+                                    "firedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "nullable": true,
+                                      "description": "When this item left the held not_sent state (its course was fired). Null while held or for pre-migration rows. Used by the KDS to start time-based ticket colouring at fire-time when coursing is active."
+                                    },
                                     "salesItemType": {
                                       "type": "string",
                                       "nullable": true,
@@ -132122,6 +133400,16 @@
                                     "isTakeaway": {
                                       "type": "boolean",
                                       "description": "Whether this specific line item is takeaway (independent of the tab-level tabType). Drives the KDS bag indicator."
+                                    },
+                                    "vatRateBasisPoints": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "description": "VAT rate in basis points for this item (e.g. 2500 = 25%). Null for unpaid orders."
+                                    },
+                                    "vatAmountCents": {
+                                      "type": "number",
+                                      "nullable": true,
+                                      "description": "VAT amount in cents for this item. Null for unpaid orders."
                                     }
                                   },
                                   "required": [
@@ -134042,6 +135330,33 @@
                           "nullable": true,
                           "description": "Number of items in order"
                         },
+                        "totalVatAmountCents": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Total VAT amount in cents. Only present for confirmed (paid) orders."
+                        },
+                        "vatBreakdown": {
+                          "type": "array",
+                          "nullable": true,
+                          "description": "VAT breakdown by rate. Only present for confirmed (paid) orders.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "vatRateBasisPoints": {
+                                "type": "number",
+                                "description": "VAT rate in basis points (e.g. 2500 = 25%)"
+                              },
+                              "vatAmountCents": {
+                                "type": "number",
+                                "description": "VAT amount in cents at this rate"
+                              }
+                            },
+                            "required": [
+                              "vatRateBasisPoints",
+                              "vatAmountCents"
+                            ]
+                          }
+                        },
                         "message": {
                           "type": "string",
                           "nullable": true,
@@ -134197,6 +135512,12 @@
                                 "nullable": true,
                                 "description": "Item-level state (not_sent, pending, accepted, in_preparation, ready_to_deliver, delivered, rejected)"
                               },
+                              "firedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "When this item left the held not_sent state (its course was fired). Null while held or for pre-migration rows. Used by the KDS to start time-based ticket colouring at fire-time when coursing is active."
+                              },
                               "salesItemType": {
                                 "type": "string",
                                 "nullable": true,
@@ -134210,6 +135531,16 @@
                               "isTakeaway": {
                                 "type": "boolean",
                                 "description": "Whether this specific line item is takeaway (independent of the tab-level tabType). Drives the KDS bag indicator."
+                              },
+                              "vatRateBasisPoints": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "VAT rate in basis points for this item (e.g. 2500 = 25%). Null for unpaid orders."
+                              },
+                              "vatAmountCents": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "VAT amount in cents for this item. Null for unpaid orders."
                               }
                             },
                             "required": [
@@ -141156,11 +142487,591 @@
                         "sessionData": {
                           "type": "string",
                           "description": "Adyen session data for Drop-in initialisation"
+                        },
+                        "clientKey": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Adyen client key for Drop-in initialisation"
+                        },
+                        "environment": {
+                          "type": "string",
+                          "description": "Adyen environment (test | live)"
                         }
                       },
                       "required": [
                         "sessionId",
-                        "sessionData"
+                        "sessionData",
+                        "environment"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_INPUT",
+                    "message": "Invalid request parameters"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 5
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_API_KEY",
+                    "message": "Invalid API key provided"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 3
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INSUFFICIENT_PERMISSIONS",
+                    "message": "You do not have permission to access this resource"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 4
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Resource does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RESOURCE_NOT_FOUND",
+                    "message": "The requested resource was not found"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 2
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Rate limit exceeded. Please try again later."
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 1
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "An unexpected error occurred"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/loyalty/finalize-card-session": {
+      "post": {
+        "summary": "Finalize Adyen zero-auth session and store card token",
+        "tags": [
+          "Payment Methods",
+          "Loyalty"
+        ],
+        "description": "Verifies the Adyen session result and stores the tokenized card in user_payment_methods.\n\nCall this after Adyen Drop-in's onPaymentCompleted fires with resultCode 'Authorised'.\nThe sessionResult token (from the Drop-in callback) is verified server-side against Adyen's\nSessions API — the card is never stored based solely on client-supplied data.\n\nIf this is the user's first card, it is automatically set as their default.\n\n**Requires authenticated user session.**\n\n**Permissions:** 🟢 `payment-methods.create`",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "type": "string",
+                    "description": "Adyen session ID from adyen-card-session response"
+                  },
+                  "sessionResult": {
+                    "type": "string",
+                    "description": "sessionResult token from Adyen Drop-in onPaymentCompleted"
+                  }
+                },
+                "required": [
+                  "sessionId",
+                  "sessionResult"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "card": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "brand": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "last4": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "expiryMonth": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "expiryYear": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "isDefault": {
+                              "type": "boolean"
+                            },
+                            "isTokenized": {
+                              "type": "boolean"
+                            },
+                            "nickname": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "isDefault",
+                            "isTokenized"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "card"
                       ]
                     },
                     "meta": {
@@ -188162,6 +190073,11 @@
                                       "type": "boolean",
                                       "description": "Whether entity is available during this rule"
                                     },
+                                    "name": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
+                                    },
                                     "createdAt": {
                                       "type": "string",
                                       "format": "date-time",
@@ -188812,6 +190728,11 @@
                           "type": "boolean",
                           "default": true,
                           "description": "Whether entity is available during this rule"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                         }
                       },
                       "required": [
@@ -188975,6 +190896,11 @@
                               "isAvailable": {
                                 "type": "boolean",
                                 "description": "Whether entity is available during this rule"
+                              },
+                              "name": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                               },
                               "createdAt": {
                                 "type": "string",
@@ -189643,6 +191569,11 @@
                               "isAvailable": {
                                 "type": "boolean",
                                 "description": "Whether entity is available during this rule"
+                              },
+                              "name": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                               },
                               "createdAt": {
                                 "type": "string",
@@ -190333,6 +192264,11 @@
                               "isAvailable": {
                                 "type": "boolean",
                                 "description": "Whether entity is available during this rule"
+                              },
+                              "name": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                               },
                               "createdAt": {
                                 "type": "string",
@@ -191412,6 +193348,11 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Whether entity is available during this rule"
+                  },
+                  "name": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                   }
                 },
                 "required": [
@@ -191513,6 +193454,11 @@
                         "isAvailable": {
                           "type": "boolean",
                           "description": "Whether entity is available during this rule"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                         },
                         "createdAt": {
                           "type": "string",
@@ -192070,6 +194016,11 @@
                           "type": "boolean",
                           "default": true,
                           "description": "Whether entity is available during this rule"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                         }
                       },
                       "required": [
@@ -192242,6 +194193,11 @@
                               "isAvailable": {
                                 "type": "boolean",
                                 "description": "Whether entity is available during this rule"
+                              },
+                              "name": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                               },
                               "createdAt": {
                                 "type": "string",
@@ -192962,6 +194918,11 @@
                                       "type": "boolean",
                                       "description": "Whether entity is available during this rule"
                                     },
+                                    "name": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
+                                    },
                                     "createdAt": {
                                       "type": "string",
                                       "format": "date-time",
@@ -193535,6 +195496,11 @@
                   },
                   "isAvailable": {
                     "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                   }
                 }
               }
@@ -193632,6 +195598,11 @@
                         "isAvailable": {
                           "type": "boolean",
                           "description": "Whether entity is available during this rule"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Optional rule label (e.g. exception name \"Christmas Day\")"
                         },
                         "createdAt": {
                           "type": "string",
@@ -212449,6 +214420,10 @@
                                       "type": "boolean",
                                       "description": "Whether user is enrolled in location loyalty program"
                                     },
+                                    "hasCardOnFile": {
+                                      "type": "boolean",
+                                      "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
+                                    },
                                     "createdAt": {
                                       "type": "string",
                                       "format": "date-time",
@@ -213616,6 +215591,10 @@
                                 "type": "boolean",
                                 "description": "Whether user is enrolled in location loyalty program"
                               },
+                              "hasCardOnFile": {
+                                "type": "boolean",
+                                "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
+                              },
                               "createdAt": {
                                 "type": "string",
                                 "format": "date-time",
@@ -214768,6 +216747,10 @@
                                 "type": "boolean",
                                 "description": "Whether user is enrolled in location loyalty program"
                               },
+                              "hasCardOnFile": {
+                                "type": "boolean",
+                                "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
+                              },
                               "createdAt": {
                                 "type": "string",
                                 "format": "date-time",
@@ -215914,6 +217897,10 @@
                               "isEnrolledInLoyalty": {
                                 "type": "boolean",
                                 "description": "Whether user is enrolled in location loyalty program"
+                              },
+                              "hasCardOnFile": {
+                                "type": "boolean",
+                                "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
                               },
                               "createdAt": {
                                 "type": "string",
@@ -218670,6 +220657,10 @@
                               "type": "boolean",
                               "description": "Whether user is enrolled in location loyalty program"
                             },
+                            "hasCardOnFile": {
+                              "type": "boolean",
+                              "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
+                            },
                             "createdAt": {
                               "type": "string",
                               "format": "date-time",
@@ -220468,6 +222459,10 @@
                               "type": "boolean",
                               "description": "Whether user is enrolled in location loyalty program"
                             },
+                            "hasCardOnFile": {
+                              "type": "boolean",
+                              "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
+                            },
                             "createdAt": {
                               "type": "string",
                               "format": "date-time",
@@ -221250,6 +223245,10 @@
                               "isEnrolledInLoyalty": {
                                 "type": "boolean",
                                 "description": "Whether user is enrolled in location loyalty program"
+                              },
+                              "hasCardOnFile": {
+                                "type": "boolean",
+                                "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
                               },
                               "createdAt": {
                                 "type": "string",
@@ -237608,6 +239607,10 @@
                                       "type": "boolean",
                                       "description": "Whether user is enrolled in location loyalty program"
                                     },
+                                    "hasCardOnFile": {
+                                      "type": "boolean",
+                                      "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
+                                    },
                                     "createdAt": {
                                       "type": "string",
                                       "format": "date-time",
@@ -238781,6 +240784,10 @@
                               "isEnrolledInLoyalty": {
                                 "type": "boolean",
                                 "description": "Whether user is enrolled in location loyalty program"
+                              },
+                              "hasCardOnFile": {
+                                "type": "boolean",
+                                "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
                               },
                               "createdAt": {
                                 "type": "string",
@@ -241510,6 +243517,10 @@
                                     "type": "boolean",
                                     "description": "Whether user is enrolled in location loyalty program"
                                   },
+                                  "hasCardOnFile": {
+                                    "type": "boolean",
+                                    "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
+                                  },
                                   "createdAt": {
                                     "type": "string",
                                     "format": "date-time",
@@ -242050,6 +244061,10 @@
                                 "type": "boolean",
                                 "description": "Whether user is enrolled in location loyalty program"
                               },
+                              "hasCardOnFile": {
+                                "type": "boolean",
+                                "description": "Whether this member has an active saved card on file (POS card-on-file payment)"
+                              },
                               "createdAt": {
                                 "type": "string",
                                 "format": "date-time",
@@ -242109,6 +244124,611 @@
                     "data",
                     "meta"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_INPUT",
+                    "message": "Invalid request parameters"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 5
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INVALID_API_KEY",
+                    "message": "Invalid API key provided"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 3
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INSUFFICIENT_PERMISSIONS",
+                    "message": "You do not have permission to access this resource"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 4
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Resource does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RESOURCE_NOT_FOUND",
+                    "message": "The requested resource was not found"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 2
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Rate limit exceeded. Please try again later."
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 1
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "error",
+                    "meta"
+                  ]
+                },
+                "example": {
+                  "status": "error",
+                  "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "An unexpected error occurred"
+                  },
+                  "meta": {
+                    "requestId": "req_123456",
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "executionTimeMs": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tabs/resolve-external": {
+      "post": {
+        "summary": "Resolve an open external (POS) tab by table QR",
+        "tags": [
+          "Tabs"
+        ],
+        "description": "Cold-start pickup for POS-integrated tables. Peeks the POS (Trivec/Domino) for an open ticket on the scanned table; only if one exists does it create/find a Karma tab and pull the ticket onto it. Returns { tabId: null, resolution: \"anonymous\" } when there is no open ticket (the storefront then shows the menu, no ghost tab is created). Called by storefront-web when active-tab resolves to anonymous on an open_tab QR.\n\n**Permissions:** 🟢 `tabs.create`",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locationId": {
+                    "type": "number",
+                    "description": "Location ID for the tab"
+                  },
+                  "qrCodeId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "QR code UUID (for table orders)"
+                  },
+                  "tabType": {
+                    "type": "string",
+                    "enum": [
+                      "table",
+                      "takeaway",
+                      "over_the_counter"
+                    ],
+                    "description": "Type of tab to create"
+                  },
+                  "paymentFlow": {
+                    "type": "string",
+                    "enum": [
+                      "open_tab",
+                      "pay_upfront"
+                    ],
+                    "description": "Payment timing (open_tab = pay later, pay_upfront = pay now)"
+                  },
+                  "orderChannel": {
+                    "type": "string",
+                    "enum": [
+                      "ONLINE",
+                      "QR",
+                      "KIOSK",
+                      "POS"
+                    ],
+                    "description": "Order channel (ONLINE = web interface, QR = QR code scan, KIOSK = self-service, POS = point of sale)"
+                  },
+                  "tabMember": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "number",
+                        "description": "User ID (Priority 1 - existing user)"
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Email address (Priority 2 - finds or creates user)"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "description": "Phone number (Priority 3 - finds or creates user)"
+                      },
+                      "identifier": {
+                        "type": "string",
+                        "description": "Device identifier (Priority 4 - creates anonymous user)"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "User identification with priority-based resolution: id > email > phone > identifier"
+                  }
+                },
+                "required": [
+                  "locationId",
+                  "qrCodeId",
+                  "tabType",
+                  "paymentFlow",
+                  "orderChannel",
+                  "tabMember"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "tabId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true,
+                          "description": "Resolved tab UUID, or null when no open external ticket"
+                        },
+                        "tabMemberId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true,
+                          "description": "Tab member UUID for the scanning guest, or null"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "enum": [
+                            "external_ticket",
+                            "anonymous"
+                          ],
+                          "description": "external_ticket when a POS tab was picked up; anonymous otherwise"
+                        },
+                        "isNewTab": {
+                          "type": "boolean",
+                          "description": "Whether a new Karma tab was created"
+                        }
+                      },
+                      "required": [
+                        "tabId",
+                        "tabMemberId",
+                        "resolution"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "executionTimeMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "executionTimeMs"
+                      ]
+                    }
+                  }
                 }
               }
             }
