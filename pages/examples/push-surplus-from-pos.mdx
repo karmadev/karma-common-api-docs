@@ -1,0 +1,516 @@
+# Pushing Surplus from Your Own POS
+
+This guide shows how to push surplus items directly from your own POS or inventory system to Karma, so they appear in the app for customers to purchase at a discount.
+
+## Overview
+
+Surplus is food that would otherwise go to waste at the end of a service — pastries left over after the lunch rush, hot food approaching close-of-day, or excess prep. By pushing surplus to Karma you:
+
+- Sell more and reduce food waste in a single step
+- Control quantity, discount, and sell-by window from your own system
+- Keep Karma's inventory in sync with your real-world stock
+
+## How It Works
+
+The helper endpoint `POST /api/v1/locations/:locationId/helpers/surplus/add` handles everything in one call:
+
+1. **Find or create the item** — pass an `externalId` (your SKU or internal ID) and full item details. Karma looks up the item by `externalId` for this location. If it doesn't exist yet, it creates it automatically.
+2. **Set the sell window** — pass a single `date` (midnight → store closing time) or an explicit `validFrom`/`validUntil` range.
+3. **Upsert the surplus entry** — if you already pushed surplus for this item today, the quantity is replaced with the new value. Pushing again at 3 pm with `quantity: 3` means there are now 3 left — not 3 more.
+
+## Prerequisites
+
+- A Karma API key with `surplus:create` permission scoped to your location
+- Your location ID (available in the Karma Merchant dashboard under Settings → Integrations)
+- Available category tag keys (see [GET /api/v1/category-tags](/api/latest/category-tags))
+- Available allergen tag keys (same endpoint, filter by type `ALLERGEN`)
+
+## Quick Example
+
+Push 5 leftover pasta dishes as surplus for today:
+
+```bash
+curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item": {
+      "externalId": "sku-pasta-bolognese",
+      "title": "Pasta Bolognese",
+      "description": "Classic slow-cooked bolognese with tagliatelle",
+      "imageUrl": "https://your-cdn.example.com/pasta-bolognese.jpg",
+      "basePriceCents": 12900,
+      "category": "FOOD",
+      "allergens": ["GLUTEN", "MILK"]
+    },
+    "quantity": 5,
+    "discountPercentage": 50,
+    "date": "2024-12-20"
+  }'
+```
+
+**Response (201 Created — first time this item appears as surplus today):**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "surplusEntry": {
+      "id": 88421,
+      "itemId": 56789,
+      "locationId": 1234,
+      "ministock": 5,
+      "validFrom": "2024-12-20T00:00:00.000Z",
+      "validUntil": "2024-12-20T21:00:00.000Z",
+      "discountPercentage": 50,
+      "overridePriceCents": null,
+      "note": null,
+      "createdAt": "2024-12-20T14:32:10.000Z",
+      "updatedAt": "2024-12-20T14:32:10.000Z"
+    },
+    "item": {
+      "id": 56789,
+      "created": true
+    }
+  },
+  "meta": {
+    "requestId": "req_abc123",
+    "timestamp": "2024-12-20T14:32:10.000Z",
+    "executionTimeMs": 87
+  }
+}
+```
+
+`item.created: true` means the inventory item was newly created. On subsequent calls for the same `externalId`, it will be `false`.
+
+## Request Reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `itemId` | integer | either/or | Existing Karma item ID. Use if you've already created items via the inventory API. |
+| `item` | object | either/or | Item definition for find-or-create. Mutually exclusive with `itemId`. |
+| `item.externalId` | string | yes (with `item`) | Your system's stable identifier for this product (SKU, PLU, barcode). Used for idempotent lookups. |
+| `item.title` | string | yes (with `item`) | Product name shown to customers. |
+| `item.description` | string | no | Short product description. |
+| `item.imageUrl` | string | no | Publicly accessible image URL. |
+| `item.basePriceCents` | integer | yes (with `item`) | Full (non-discounted) price in cents, e.g. `12900` for 129 SEK. |
+| `item.category` | string | no | Existing category tag key. See GET /api/v1/category-tags. |
+| `item.allergens` | string[] | no | Existing allergen tag keys. See GET /api/v1/category-tags?type=ALLERGEN. |
+| `quantity` | integer ≥ 1 | **yes** | Number of surplus items available. Replaces any existing quantity for this item/date. |
+| `discountPercentage` | integer 50–90 | no | Discount off `basePriceCents`. E.g. `50` = half price. |
+| `overridePriceCents` | integer ≥ 0 | no | Fixed surplus price in cents. Mutually exclusive with `discountPercentage`. |
+| `note` | string | no | Internal note (not customer-facing). |
+| `date` | string | either/or | ISO date (`YYYY-MM-DD`). Sell window is midnight → store closing time. |
+| `validFrom` | string | either/or | ISO date or datetime for start of sell window. |
+| `validUntil` | string | no | ISO date or datetime for end of sell window. |
+
+## Scenario Walkthroughs
+
+### End-of-day push from POS
+
+Your POS runs a nightly job at 19:00 that checks remaining stock and pushes anything above a threshold to Karma:
+
+```typescript
+async function pushEndOfDaySurplus(locationId: number, apiKey: string) {
+  const remaining = await pos.getRemainingStock() // your POS API
+
+  const surplusItems = remaining.filter(item => item.quantity >= 2 && item.expiresAfterToday)
+
+  for (const item of surplusItems) {
+    await fetch(
+      `https://common-api.karma.life/api/v1/locations/${locationId}/helpers/surplus/add`,
+      {
+        method: 'POST',
+        headers: {
+          'X-API-Key': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          item: {
+            externalId: item.sku,
+            title: item.name,
+            description: item.description,
+            imageUrl: item.imageUrl,
+            basePriceCents: Math.round(item.priceSEK * 100),
+            category: mapCategory(item.category), // e.g. 'FOOD' or 'BEVERAGE'
+            allergens: item.allergens,             // e.g. ['GLUTEN', 'MILK']
+          },
+          quantity: item.quantity,
+          discountPercentage: 50,
+          date: new Date().toISOString().slice(0, 10), // today: "2024-12-20"
+        }),
+      }
+    )
+  }
+}
+
+function mapCategory(posCategory: string): string {
+  // Map your POS categories to Karma tag keys
+  const map: Record<string, string> = {
+    'hot-food': 'FOOD',
+    'bakery':   'BAKERY',
+    'drinks':   'BEVERAGE',
+  }
+  return map[posCategory] ?? 'FOOD'
+}
+```
+
+### Updating quantity mid-day
+
+You already pushed 10 items at open. At noon, 4 have sold via Karma and 3 more via in-store. Push the updated count — Karma replaces the quantity:
+
+```bash
+# Now only 3 remain (10 - 4 sold on Karma - 3 in-store = 3)
+curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item": {
+      "externalId": "sku-pasta-bolognese",
+      "title": "Pasta Bolognese",
+      "basePriceCents": 12900
+    },
+    "quantity": 3,
+    "discountPercentage": 50,
+    "date": "2024-12-20"
+  }'
+```
+
+The response will be `200 OK` (not 201) — the entry was updated, not created.
+
+### Using an existing Karma item ID
+
+If you've already created items manually in the Karma dashboard and know their IDs, skip the find-or-create and reference by ID directly:
+
+```bash
+curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "itemId": 56789,
+    "quantity": 8,
+    "overridePriceCents": 5900,
+    "date": "2024-12-20",
+    "note": "Fresh batch — best before 21:00"
+  }'
+```
+
+### Explicit sell window (e.g. lunch rush only)
+
+Sell surplus only during the lunch window, not all day:
+
+```bash
+curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item": {
+      "externalId": "sku-lunch-box",
+      "title": "Today'\''s Lunch Box",
+      "basePriceCents": 13900
+    },
+    "quantity": 6,
+    "discountPercentage": 60,
+    "validFrom": "2024-12-20",
+    "validUntil": "2024-12-20T14:00:00.000Z"
+  }'
+```
+
+## Fetching Available Tag Keys
+
+Before you can set `category` or `allergens`, look up the tag keys your Karma account has configured:
+
+```bash
+# All category tags
+curl "https://common-api.karma.life/api/v1/category-tags" \
+  -H "X-API-Key: karma_live_your_key_here"
+
+# Allergen tags only
+curl "https://common-api.karma.life/api/v1/category-tags?type=ALLERGEN" \
+  -H "X-API-Key: karma_live_your_key_here"
+```
+
+Common examples:
+
+| Key | Meaning |
+|-----|---------|
+| `FOOD` | General food |
+| `BEVERAGE` | Drinks |
+| `BAKERY` | Baked goods |
+| `GLUTEN` | Contains gluten |
+| `MILK` | Contains milk / dairy |
+| `NUTS` | Contains nuts |
+| `EGG` | Contains egg |
+| `FISH` | Contains fish |
+
+## Error Handling
+
+| HTTP status | When it happens | What to do |
+|-------------|----------------|-----------|
+| `400 Bad Request` | Missing required field, both `itemId` and `item` provided, both `discountPercentage` and `overridePriceCents` set | Fix the request body per the error message |
+| `401 Unauthorized` | Missing or invalid API key | Check your `X-API-Key` header |
+| `403 Forbidden` | API key lacks `surplus:create` permission for this location | Contact Karma support to update key permissions |
+| `404 Not Found` | `itemId` not found at this location | Verify the item ID and location ID |
+| `500 Internal Server Error` | Server-side error | Retry with exponential backoff; contact Karma if persistent |
+
+## Best Practices
+
+### Keep `externalId` stable
+The `externalId` is how Karma maps your POS product to its internal item. Use a stable identifier (SKU, PLU, barcode) — never a name or timestamp. Changing the `externalId` creates a duplicate item.
+
+### Push quantities, not deltas
+Always push the current absolute quantity remaining, not how many you want to add. If you have 8 left, push `quantity: 8`. Karma replaces the number, so pushing twice with 5 leaves you with 5 — not 10.
+
+### Set `discountPercentage` at 50 % minimum
+The Karma platform enforces a minimum 50 % discount on surplus items. Using `overridePriceCents` bypasses the percentage calculation but still represents a meaningful saving for customers.
+
+### Automate the push, then let webhooks handle sold-out
+Subscribe to the `surplus.sold_out` webhook to know when Karma customers have bought all available units — then stop serving that item from your POS too if needed.
+
+```bash
+# Subscribe to surplus events
+curl -X POST "https://common-api.karma.life/api/v1/webhooks/subscriptions" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-pos-system.example.com/webhooks/karma",
+    "events": ["surplus.sold_out", "surplus.added"],
+    "secret": "your-webhook-secret"
+  }'
+```
+
+## Listing Your Surplus
+
+Use `GET /api/v1/locations/:locationId/helpers/surplus` to see everything you've pushed — past, active, and future — with each item's `externalId` included so you can map entries back to your own product IDs.
+
+```bash
+# All surplus for this location
+curl "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus" \
+  -H "X-API-Key: karma_live_your_key_here"
+
+# Filter to a specific date range
+curl "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus?from=2024-12-20&to=2024-12-22" \
+  -H "X-API-Key: karma_live_your_key_here"
+```
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "surplusEntries": [
+      {
+        "id": 88421,
+        "itemId": 56789,
+        "locationId": 1234,
+        "ministock": 5,
+        "validFrom": "2024-12-20T00:00:00.000Z",
+        "validUntil": "2024-12-20T21:00:00.000Z",
+        "discountPercentage": 50,
+        "overridePriceCents": null,
+        "computedPriceCents": 6450,
+        "note": null,
+        "status": "active",
+        "createdAt": "2024-12-20T14:32:10.000Z",
+        "updatedAt": "2024-12-20T14:32:10.000Z",
+        "item": {
+          "id": 56789,
+          "externalId": "sku-pasta-bolognese",
+          "name": "Pasta Bolognese",
+          "description": "Classic slow-cooked bolognese with tagliatelle",
+          "imageUrl": "https://your-cdn.example.com/pasta-bolognese.jpg",
+          "basePriceCents": 12900
+        }
+      }
+    ]
+  }
+}
+```
+
+Each entry has a computed `status`:
+
+| Value | Meaning |
+|-------|---------|
+| `upcoming` | `validFrom` is in the future — not yet visible to customers |
+| `active` | Currently within the sell window |
+| `expired` | `validUntil` has passed |
+
+### Syncing with your POS display
+
+```typescript
+async function getSurplusByExternalId(
+  locationId: number,
+  apiKey: string,
+): Promise<Map<string, { surplusId: number; quantity: number; status: string }>> {
+  const res = await fetch(
+    `https://common-api.karma.life/api/v1/locations/${locationId}/helpers/surplus`,
+    { headers: { 'X-API-Key': apiKey } },
+  )
+  const { data } = await res.json()
+
+  // Key by your own product ID for easy lookup
+  return new Map(
+    data.surplusEntries
+      .filter((e: any) => e.item.externalId)
+      .map((e: any) => [
+        e.item.externalId,
+        { surplusId: e.id, quantity: e.ministock, status: e.status },
+      ]),
+  )
+}
+```
+
+---
+
+## Editing and Deleting Surplus
+
+Once you have a surplus entry's `id` (from the list or add response), you can update its quantity or remove it entirely.
+
+### Update quantity (e.g. +/- buttons in your UI)
+
+`PUT /api/v1/locations/:locationId/surplus/:id` replaces the entire surplus entry. To implement increment/decrement buttons, fetch the current quantity first, then push the new value:
+
+```typescript
+async function adjustSurplusQuantity(
+  locationId: number,
+  surplusId: number,
+  delta: number,         // +1, -1, or any integer
+  apiKey: string,
+): Promise<void> {
+  // 1. Fetch current state
+  const listRes = await fetch(
+    `https://common-api.karma.life/api/v1/locations/${locationId}/helpers/surplus`,
+    { headers: { 'X-API-Key': apiKey } },
+  )
+  const { data } = await listRes.json()
+  const entry = data.surplusEntries.find((e: any) => e.id === surplusId)
+  if (!entry) throw new Error(`Surplus entry ${surplusId} not found`)
+
+  const newQuantity = Math.max(0, entry.ministock + delta)
+
+  if (newQuantity === 0) {
+    // Delete instead of setting to zero
+    await deleteSurplusEntry(locationId, surplusId, apiKey)
+    return
+  }
+
+  // 2. Update with new quantity
+  await fetch(
+    `https://common-api.karma.life/api/v1/locations/${locationId}/surplus/${surplusId}`,
+    {
+      method: 'PUT',
+      headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ministock: newQuantity }),
+    },
+  )
+}
+```
+
+Or if you already know the current quantity (e.g. it's displayed in your UI), skip the fetch:
+
+```bash
+# Set quantity to 3
+curl -X PUT "https://common-api.karma.life/api/v1/locations/1234/surplus/88421" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "ministock": 3 }'
+```
+
+You can also update other fields in the same PUT call — `discountPercentage`, `overridePriceCents`, `note`, `validUntil`:
+
+```bash
+# Change discount and add a note
+curl -X PUT "https://common-api.karma.life/api/v1/locations/1234/surplus/88421" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ministock": 3,
+    "discountPercentage": 70,
+    "note": "Half-price after 19:00"
+  }'
+```
+
+### Delete a surplus entry
+
+`DELETE /api/v1/locations/:locationId/surplus/:id` removes the entry immediately. Customers will no longer see it in the app.
+
+```typescript
+async function deleteSurplusEntry(
+  locationId: number,
+  surplusId: number,
+  apiKey: string,
+): Promise<void> {
+  const res = await fetch(
+    `https://common-api.karma.life/api/v1/locations/${locationId}/surplus/${surplusId}`,
+    { method: 'DELETE', headers: { 'X-API-Key': apiKey } },
+  )
+  if (!res.ok && res.status !== 204) {
+    throw new Error(`Delete failed: ${res.status}`)
+  }
+}
+```
+
+```bash
+curl -X DELETE "https://common-api.karma.life/api/v1/locations/1234/surplus/88421" \
+  -H "X-API-Key: karma_live_your_key_here"
+# → 204 No Content
+```
+
+### Full +/- UI pattern
+
+Here's a complete React example for a surplus management screen with increment, decrement, and delete:
+
+```tsx
+function SurplusRow({ entry, locationId, apiKey, onUpdate }: {
+  entry: { id: number; ministock: number; item: { name: string } }
+  locationId: number
+  apiKey: string
+  onUpdate: () => void
+}) {
+  const update = async (newQty: number) => {
+    if (newQty <= 0) {
+      await fetch(`/api/proxy/locations/${locationId}/surplus/${entry.id}`, { method: 'DELETE' })
+    } else {
+      await fetch(`/api/proxy/locations/${locationId}/surplus/${entry.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ministock: newQty }),
+      })
+    }
+    onUpdate()
+  }
+
+  return (
+    <div className="surplus-row">
+      <span>{entry.item.name}</span>
+      <button onClick={() => update(entry.ministock - 1)}>−</button>
+      <span>{entry.ministock}</span>
+      <button onClick={() => update(entry.ministock + 1)}>+</button>
+      <button onClick={() => update(0)}>Remove</button>
+    </div>
+  )
+}
+```
+
+> **Tip:** If quantity reaches 0 in the Karma app (all units sold), the entry becomes inactive automatically — you don't need to delete it. Delete is for manually removing surplus you decide not to sell after all.
+
+---
+
+## Related Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/locations/:locationId/helpers/surplus` | **Helper:** List all surplus (all dates, includes externalId + status) |
+| POST | `/api/v1/locations/:locationId/helpers/surplus/add` | **Helper:** Find-or-create item and add surplus in one call |
+| GET | `/api/v1/locations/:locationId/surplus` | List active/recent surplus entries for a location |
+| POST | `/api/v1/locations/:locationId/surplus` | Create a surplus entry (requires existing item ID) |
+| POST | `/api/v1/locations/:locationId/surplus/bulk` | Bulk-create surplus entries |
+| PUT | `/api/v1/locations/:locationId/surplus/:id` | Update an existing surplus entry |
+| DELETE | `/api/v1/locations/:locationId/surplus/:id` | Remove a surplus entry |
+| GET | `/api/v1/locations/:locationId/surplus/active` | Public: list currently active surplus (used by Karma app) |
+| GET | `/api/v1/category-tags` | List all category and allergen tag keys |
+
+## Need Help?
+
+Contact [hello@karma.life](mailto:hello@karma.life) with your location ID and API key name and we'll help you get set up.
