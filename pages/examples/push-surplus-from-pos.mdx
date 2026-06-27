@@ -27,7 +27,42 @@ The helper endpoint `POST /api/v1/locations/:locationId/helpers/surplus/add` han
 
 ## Quick Example
 
-Push 5 leftover pasta dishes as surplus for today:
+Install the SDK or use plain `fetch` — both are shown below.
+
+```bash
+npm install @karmalicious/karma-api-js
+```
+
+### With the SDK
+
+```typescript
+import { createKarmaClient } from '@karmalicious/karma-api-js'
+
+const client = createKarmaClient({
+  apiKey: 'karma_live_your_key_here',
+  locationId: 1234,
+})
+
+const result = await client.surplus.add({
+  item: {
+    externalId: 'sku-pasta-bolognese',
+    title: 'Pasta Bolognese',
+    description: 'Classic slow-cooked bolognese with tagliatelle',
+    imageUrl: 'https://your-cdn.example.com/pasta-bolognese.jpg',
+    basePriceCents: 12900,
+    category: 'FOOD',
+    allergens: ['GLUTEN', 'MILK'],
+  },
+  quantity: 5,
+  discountPercentage: 50,
+  date: '2024-12-20',
+})
+
+console.log(result.surplusEntry.id) // e.g. 88421
+console.log(result.item.created)    // true if the item was newly created
+```
+
+### With curl
 
 ```bash
 curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
@@ -111,41 +146,33 @@ curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplu
 Your POS runs a nightly job at 19:00 that checks remaining stock and pushes anything above a threshold to Karma:
 
 ```typescript
-async function pushEndOfDaySurplus(locationId: number, apiKey: string) {
+import { createKarmaClient } from '@karmalicious/karma-api-js'
+
+const client = createKarmaClient({ apiKey: process.env.KARMA_API_KEY!, locationId: 1234 })
+
+async function pushEndOfDaySurplus() {
   const remaining = await pos.getRemainingStock() // your POS API
+  const today = new Date().toISOString().slice(0, 10) // "2024-12-20"
 
-  const surplusItems = remaining.filter(item => item.quantity >= 2 && item.expiresAfterToday)
-
-  for (const item of surplusItems) {
-    await fetch(
-      `https://common-api.karma.life/api/v1/locations/${locationId}/helpers/surplus/add`,
-      {
-        method: 'POST',
-        headers: {
-          'X-API-Key': apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          item: {
-            externalId: item.sku,
-            title: item.name,
-            description: item.description,
-            imageUrl: item.imageUrl,
-            basePriceCents: Math.round(item.priceSEK * 100),
-            category: mapCategory(item.category), // e.g. 'FOOD' or 'BEVERAGE'
-            allergens: item.allergens,             // e.g. ['GLUTEN', 'MILK']
-          },
-          quantity: item.quantity,
-          discountPercentage: 50,
-          date: new Date().toISOString().slice(0, 10), // today: "2024-12-20"
-        }),
-      }
-    )
+  for (const item of remaining.filter(i => i.quantity >= 2 && i.expiresAfterToday)) {
+    await client.surplus.add({
+      item: {
+        externalId: item.sku,
+        title: item.name,
+        description: item.description,
+        imageUrl: item.imageUrl,
+        basePriceCents: Math.round(item.priceSEK * 100),
+        category: mapCategory(item.category),
+        allergens: item.allergens,
+      },
+      quantity: item.quantity,
+      discountPercentage: 50,
+      date: today,
+    })
   }
 }
 
 function mapCategory(posCategory: string): string {
-  // Map your POS categories to Karma tag keys
   const map: Record<string, string> = {
     'hot-food': 'FOOD',
     'bakery':   'BAKERY',
@@ -339,24 +366,18 @@ Each entry has a computed `status`:
 ### Syncing with your POS display
 
 ```typescript
-async function getSurplusByExternalId(
-  locationId: number,
-  apiKey: string,
-): Promise<Map<string, { surplusId: number; quantity: number; status: string }>> {
-  const res = await fetch(
-    `https://common-api.karma.life/api/v1/locations/${locationId}/helpers/surplus`,
-    { headers: { 'X-API-Key': apiKey } },
-  )
-  const { data } = await res.json()
+import { createKarmaClient } from '@karmalicious/karma-api-js'
+
+const client = createKarmaClient({ apiKey: process.env.KARMA_API_KEY!, locationId: 1234 })
+
+async function getSurplusByExternalId() {
+  const entries = await client.surplus.list()
 
   // Key by your own product ID for easy lookup
   return new Map(
-    data.surplusEntries
-      .filter((e: any) => e.item.externalId)
-      .map((e: any) => [
-        e.item.externalId,
-        { surplusId: e.id, quantity: e.ministock, status: e.status },
-      ]),
+    entries
+      .filter(e => e.item.externalId)
+      .map(e => [e.item.externalId!, { surplusId: e.id, quantity: e.ministock, status: e.status }])
   )
 }
 ```
@@ -369,41 +390,25 @@ Once you have a surplus entry's `id` (from the list or add response), you can up
 
 ### Update quantity (e.g. +/- buttons in your UI)
 
-`PUT /api/v1/locations/:locationId/surplus/:id` replaces the entire surplus entry. To implement increment/decrement buttons, fetch the current quantity first, then push the new value:
+`client.surplus.update(id, { ministock })` replaces the quantity. To implement increment/decrement buttons, fetch the current state first:
 
 ```typescript
-async function adjustSurplusQuantity(
-  locationId: number,
-  surplusId: number,
-  delta: number,         // +1, -1, or any integer
-  apiKey: string,
-): Promise<void> {
-  // 1. Fetch current state
-  const listRes = await fetch(
-    `https://common-api.karma.life/api/v1/locations/${locationId}/helpers/surplus`,
-    { headers: { 'X-API-Key': apiKey } },
-  )
-  const { data } = await listRes.json()
-  const entry = data.surplusEntries.find((e: any) => e.id === surplusId)
+import { createKarmaClient } from '@karmalicious/karma-api-js'
+
+const client = createKarmaClient({ apiKey: process.env.KARMA_API_KEY!, locationId: 1234 })
+
+async function adjustSurplusQuantity(surplusId: number, delta: number) {
+  const entries = await client.surplus.list()
+  const entry = entries.find(e => e.id === surplusId)
   if (!entry) throw new Error(`Surplus entry ${surplusId} not found`)
 
   const newQuantity = Math.max(0, entry.ministock + delta)
 
   if (newQuantity === 0) {
-    // Delete instead of setting to zero
-    await deleteSurplusEntry(locationId, surplusId, apiKey)
-    return
+    await client.surplus.delete(surplusId)
+  } else {
+    await client.surplus.update(surplusId, { ministock: newQuantity })
   }
-
-  // 2. Update with new quantity
-  await fetch(
-    `https://common-api.karma.life/api/v1/locations/${locationId}/surplus/${surplusId}`,
-    {
-      method: 'PUT',
-      headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ministock: newQuantity }),
-    },
-  )
 }
 ```
 
@@ -433,22 +438,10 @@ curl -X PUT "https://common-api.karma.life/api/v1/locations/1234/surplus/88421" 
 
 ### Delete a surplus entry
 
-`DELETE /api/v1/locations/:locationId/surplus/:id` removes the entry immediately. Customers will no longer see it in the app.
+Removes the entry immediately — customers will no longer see it in the app.
 
 ```typescript
-async function deleteSurplusEntry(
-  locationId: number,
-  surplusId: number,
-  apiKey: string,
-): Promise<void> {
-  const res = await fetch(
-    `https://common-api.karma.life/api/v1/locations/${locationId}/surplus/${surplusId}`,
-    { method: 'DELETE', headers: { 'X-API-Key': apiKey } },
-  )
-  if (!res.ok && res.status !== 204) {
-    throw new Error(`Delete failed: ${res.status}`)
-  }
-}
+await client.surplus.delete(88421)
 ```
 
 ```bash
