@@ -11,31 +11,22 @@ The Karma Common API is a centralized REST API for the Karma restaurant platform
 - **Comprehensive Access Control** — Fine-grained permissions for all resources
 - **Rate Limiting** — Automatic rate limiting based on your API key tier
 - **Webhook Support** — Real-time event notifications via webhooks
-- **TypeScript SDK** — Official SDK for JavaScript/TypeScript applications
+- **Standard REST** — Works with any HTTP client: `fetch`, `curl`, Postman, or your language of choice
 
 ## Quick Start
 
-Install the official TypeScript/JavaScript SDK:
-
 ```bash
-npm install @karmalicious/karma-api-js
+curl "https://common-api.karma.life/api/v1/inventory?locationId=100&limit=50" \
+  -H "X-API-Key: karma_live_your_api_key_here"
 ```
 
 ```typescript
-import { createKarmaClient } from "@karmalicious/karma-api-js";
-
-const client = createKarmaClient({
-  apiKey: "karma_live_your_api_key_here",
-  baseUrl: "https://common-api.karma.life",
-});
-
-const inventory = await client.inventory.getInventoryItems({
-  locationId: 100,
-  limit: 50,
-});
+const response = await fetch(
+  "https://common-api.karma.life/api/v1/inventory?locationId=100&limit=50",
+  { headers: { "X-API-Key": "karma_live_your_api_key_here" } }
+);
+const { data } = await response.json();
 ```
-
-View the package on npm: [@karmalicious/karma-api-js](https://www.npmjs.com/package/@karmalicious/karma-api-js).
 
 ## API Environments
 

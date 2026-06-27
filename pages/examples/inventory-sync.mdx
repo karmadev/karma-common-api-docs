@@ -24,8 +24,6 @@ Inventory sync is essential for:
 ### TypeScript Implementation
 
 ```typescript
-import { createKarmaClient } from '@karmalicious/karma-api-js'
-
 interface InventoryItem {
   id: number
   title: string
@@ -55,25 +53,18 @@ async function pullInventory(
   apiKey: string,
   locationId: number
 ): Promise<InventoryItem[]> {
-  const client = createKarmaClient({
-    apiKey,
-    baseUrl: 'https://common-api.karma.life'
-  })
-
   const allItems: InventoryItem[] = []
   let page = 1
   let hasMore = true
 
   while (hasMore) {
-    const response = await client.inventory.getInventoryItems({
-      locationId,
-      includeVariants: true,
-      includeUnavailable: true, // Include out-of-stock items
-      page,
-      limit: 100
-    })
+    const response = await fetch(
+      `https://common-api.karma.life/api/v1/inventory?locationId=${locationId}&includeVariants=true&includeUnavailable=true&page=${page}&limit=100`,
+      { headers: { 'X-API-Key': apiKey } }
+    )
+    const { data } = await response.json()
 
-    const items = response.data.items.map(item => ({
+    const items = data.items.map((item: any) => ({
       id: item.id,
       title: item.title,
       basePrice: item.basePrice,
@@ -85,7 +76,7 @@ async function pullInventory(
     }))
 
     allItems.push(...items)
-    hasMore = response.data.pagination.hasMore
+    hasMore = data.pagination.hasMore
     page++
   }
 
@@ -146,14 +137,14 @@ async function updateItemAvailability(
   itemId: number,
   available: boolean
 ): Promise<void> {
-  const client = createKarmaClient({
-    apiKey,
-    baseUrl: 'https://common-api.karma.life'
-  })
-
-  await client.inventory.updateInventoryItem(itemId, {
-    locationId,
-    available
+  await fetch(`https://common-api.karma.life/api/v1/inventory/${itemId}`, {
+    method: 'PUT',
+    headers: {
+      'X-API-Key': apiKey,
+      'X-Location-Id': String(locationId),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ available }),
   })
 
   console.log(`Item ${itemId} availability set to ${available}`)
@@ -165,10 +156,11 @@ async function bulkUpdateAvailability(
   locationId: number,
   updates: Array<{ itemId: number; available: boolean }>
 ): Promise<void> {
-  const client = createKarmaClient({
-    apiKey,
-    baseUrl: 'https://common-api.karma.life'
-  })
+  const headers = {
+    'X-API-Key': apiKey,
+    'X-Location-Id': String(locationId),
+    'Content-Type': 'application/json',
+  }
 
   // Process in batches to respect rate limits
   const batchSize = 10
@@ -177,9 +169,10 @@ async function bulkUpdateAvailability(
 
     await Promise.all(
       batch.map(update =>
-        client.inventory.updateInventoryItem(update.itemId, {
-          locationId,
-          available: update.available
+        fetch(`https://common-api.karma.life/api/v1/inventory/${update.itemId}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ available: update.available }),
         })
       )
     )
@@ -201,14 +194,14 @@ async function updateItemPrice(
   itemId: number,
   newPriceCents: number
 ): Promise<void> {
-  const client = createKarmaClient({
-    apiKey,
-    baseUrl: 'https://common-api.karma.life'
-  })
-
-  await client.inventory.updateInventoryItem(itemId, {
-    locationId,
-    basePrice: newPriceCents // Always in cents!
+  await fetch(`https://common-api.karma.life/api/v1/inventory/${itemId}`, {
+    method: 'PUT',
+    headers: {
+      'X-API-Key': apiKey,
+      'X-Location-Id': String(locationId),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ basePrice: newPriceCents }), // Always in cents!
   })
 
   console.log(`Item ${itemId} price updated to ${newPriceCents / 100} SEK`)
@@ -260,10 +253,11 @@ async function twoWayInventorySync(
   outOfStock: number
   priceChanges: number
 }> {
-  const client = createKarmaClient({
-    apiKey,
-    baseUrl: 'https://common-api.karma.life'
-  })
+  const headers = {
+    'X-API-Key': apiKey,
+    'X-Location-Id': String(locationId),
+    'Content-Type': 'application/json',
+  }
 
   // Pull current Karma inventory
   const karmaInventory = await pullInventory(apiKey, locationId)
@@ -282,7 +276,7 @@ async function twoWayInventorySync(
       continue
     }
 
-    const updates: any = {}
+    const updates: Record<string, unknown> = {}
 
     // Check availability
     const shouldBeAvailable = extItem.inStock && extItem.stockQuantity > 0
@@ -300,9 +294,10 @@ async function twoWayInventorySync(
 
     // Apply updates if any
     if (Object.keys(updates).length > 0) {
-      await client.inventory.updateInventoryItem(extItem.karmaId, {
-        locationId,
-        ...updates
+      await fetch(`https://common-api.karma.life/api/v1/inventory/${extItem.karmaId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(updates),
       })
       updated++
       console.log(`Updated ${extItem.sku}: ${JSON.stringify(updates)}`)
@@ -333,21 +328,15 @@ async function runSync() {
 
 For real-time sync, subscribe to inventory webhooks:
 
-```typescript
-// Webhook events for inventory
-const inventoryEvents = [
-  'inventory.created',
-  'inventory.updated',
-  'inventory.deleted',
-  'inventory.availability_changed'
-]
-
-// Create webhook subscription
-await client.webhooks.createSubscription({
-  url: 'https://your-server.com/webhooks/karma',
-  events: inventoryEvents,
-  secret: 'your_webhook_secret'
-})
+```bash
+curl -X POST "https://common-api.karma.life/api/v1/webhooks/subscriptions" \
+  -H "X-API-Key: karma_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-server.com/webhooks/karma",
+    "events": ["inventory.created", "inventory.updated", "inventory.deleted", "inventory.availability_changed"],
+    "secret": "your_webhook_secret"
+  }'
 ```
 
 See the [Webhooks Example](./realtime-webhooks.md) for detailed webhook implementation.
@@ -435,11 +424,11 @@ const priceCents = Math.round(priceInSEK * 100)
 
 ### 2. Handle Variants Properly
 When updating variant availability, use the variant groups endpoint:
-```typescript
-// Update variant option availability
-await client.variantGroups.updateVariantOption(optionId, {
-  available: false
-})
+```bash
+curl -X PUT "https://common-api.karma.life/api/v1/variant-groups/:id/options/:optionId" \
+  -H "X-API-Key: karma_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "available": false }'
 ```
 
 ### 3. Use X-Location-Id Header
