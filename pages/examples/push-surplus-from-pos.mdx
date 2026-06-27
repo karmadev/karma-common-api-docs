@@ -33,9 +33,8 @@ Install the SDK or use plain `fetch` — both are shown below.
 npm install @karmalicious/karma-api-js
 ```
 
-### With the SDK
-
-```typescript
+<CodeTabs>
+```typescript SDK
 import { createKarmaClient } from '@karmalicious/karma-api-js'
 
 const client = createKarmaClient({
@@ -62,9 +61,7 @@ console.log(result.surplusEntry.id) // e.g. 88421
 console.log(result.item.created)    // true if the item was newly created
 ```
 
-### With curl
-
-```bash
+```bash curl
 curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
   -H "X-API-Key: karma_live_your_key_here" \
   -H "Content-Type: application/json" \
@@ -83,6 +80,7 @@ curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplu
     "date": "2024-12-20"
   }'
 ```
+</CodeTabs>
 
 **Response (201 Created — first time this item appears as surplus today):**
 
@@ -186,7 +184,18 @@ function mapCategory(posCategory: string): string {
 
 You already pushed 10 items at open. At noon, 4 have sold via Karma and 3 more via in-store. Push the updated count — Karma replaces the quantity:
 
-```bash
+<CodeTabs>
+```typescript SDK
+// Now only 3 remain (10 - 4 sold on Karma - 3 in-store = 3)
+await client.surplus.add({
+  item: { externalId: 'sku-pasta-bolognese', title: 'Pasta Bolognese', basePriceCents: 12900 },
+  quantity: 3,
+  discountPercentage: 50,
+  date: '2024-12-20',
+})
+```
+
+```bash curl
 # Now only 3 remain (10 - 4 sold on Karma - 3 in-store = 3)
 curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
   -H "X-API-Key: karma_live_your_key_here" \
@@ -202,6 +211,7 @@ curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplu
     "date": "2024-12-20"
   }'
 ```
+</CodeTabs>
 
 The response will be `200 OK` (not 201) — the entry was updated, not created.
 
@@ -209,7 +219,18 @@ The response will be `200 OK` (not 201) — the entry was updated, not created.
 
 If you've already created items manually in the Karma dashboard and know their IDs, skip the find-or-create and reference by ID directly:
 
-```bash
+<CodeTabs>
+```typescript SDK
+await client.surplus.add({
+  itemId: 56789,
+  quantity: 8,
+  overridePriceCents: 5900,
+  date: '2024-12-20',
+  note: 'Fresh batch — best before 21:00',
+})
+```
+
+```bash curl
 curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
   -H "X-API-Key: karma_live_your_key_here" \
   -H "Content-Type: application/json" \
@@ -221,12 +242,24 @@ curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplu
     "note": "Fresh batch — best before 21:00"
   }'
 ```
+</CodeTabs>
 
 ### Explicit sell window (e.g. lunch rush only)
 
 Sell surplus only during the lunch window, not all day:
 
-```bash
+<CodeTabs>
+```typescript SDK
+await client.surplus.add({
+  item: { externalId: 'sku-lunch-box', title: "Today's Lunch Box", basePriceCents: 13900 },
+  quantity: 6,
+  discountPercentage: 60,
+  validFrom: '2024-12-20',
+  validUntil: '2024-12-20T14:00:00.000Z',
+})
+```
+
+```bash curl
 curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
   -H "X-API-Key: karma_live_your_key_here" \
   -H "Content-Type: application/json" \
@@ -242,6 +275,7 @@ curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplu
     "validUntil": "2024-12-20T14:00:00.000Z"
   }'
 ```
+</CodeTabs>
 
 ## Fetching Available Tag Keys
 
@@ -414,17 +448,28 @@ async function adjustSurplusQuantity(surplusId: number, delta: number) {
 
 Or if you already know the current quantity (e.g. it's displayed in your UI), skip the fetch:
 
-```bash
+<CodeTabs>
+```typescript SDK
+await client.surplus.update(88421, { ministock: 3 })
+```
+
+```bash curl
 # Set quantity to 3
 curl -X PUT "https://common-api.karma.life/api/v1/locations/1234/surplus/88421" \
   -H "X-API-Key: karma_live_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{ "ministock": 3 }'
 ```
+</CodeTabs>
 
-You can also update other fields in the same PUT call — `discountPercentage`, `overridePriceCents`, `note`, `validUntil`:
+You can also update other fields in the same call — `discountPercentage`, `overridePriceCents`, `note`, `validUntil`:
 
-```bash
+<CodeTabs>
+```typescript SDK
+await client.surplus.update(88421, { ministock: 3, discountPercentage: 70, note: 'Half-price after 19:00' })
+```
+
+```bash curl
 # Change discount and add a note
 curl -X PUT "https://common-api.karma.life/api/v1/locations/1234/surplus/88421" \
   -H "X-API-Key: karma_live_your_key_here" \
@@ -435,20 +480,23 @@ curl -X PUT "https://common-api.karma.life/api/v1/locations/1234/surplus/88421" 
     "note": "Half-price after 19:00"
   }'
 ```
+</CodeTabs>
 
 ### Delete a surplus entry
 
 Removes the entry immediately — customers will no longer see it in the app.
 
-```typescript
+<CodeTabs>
+```typescript SDK
 await client.surplus.delete(88421)
 ```
 
-```bash
+```bash curl
 curl -X DELETE "https://common-api.karma.life/api/v1/locations/1234/surplus/88421" \
   -H "X-API-Key: karma_live_your_key_here"
 # → 204 No Content
 ```
+</CodeTabs>
 
 ### Full +/- UI pattern
 
