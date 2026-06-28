@@ -277,6 +277,151 @@ curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplu
 ```
 </CodeTabs>
 
+## Bulk Upload (High-Volume Integrations)
+
+For integrations that push many products at once — grocery chains, large venue systems, or any automated nightly sync — the bulk endpoint lets you send up to 500 items in a single call. It has the same item find-or-create logic as the single endpoint; the main difference is that **errors are per-item** — one bad entry doesn't abort the rest.
+
+<CodeTabs>
+```typescript SDK
+import { createKarmaClient } from '@karmalicious/karma-api-js'
+
+const client = createKarmaClient({
+  apiKey: 'karma_live_your_key_here',
+  locationId: 1234,
+})
+
+const today = new Date().toISOString().slice(0, 10) // e.g. "2024-12-20"
+
+const { results, errors } = await client.surplus.addBulk([
+  {
+    item: {
+      externalId: 'sku-pasta-bolognese',
+      title: 'Pasta Bolognese',
+      basePriceCents: 12900,
+      category: 'FOOD',
+      allergens: ['GLUTEN', 'MILK'],
+    },
+    quantity: 5,
+    discountPercentage: 50,
+    date: today,
+  },
+  {
+    item: {
+      externalId: 'sku-garlic-bread',
+      title: 'Garlic Bread',
+      basePriceCents: 3900,
+      category: 'BAKERY',
+      allergens: ['GLUTEN', 'MILK'],
+    },
+    quantity: 8,
+    discountPercentage: 60,
+    date: today,
+  },
+  // ... up to 500 items
+])
+
+console.log(`Created: ${results.length}, Errors: ${errors.length}`)
+
+for (const err of errors) {
+  console.error(`Item at index ${err.index} failed: ${err.error}`)
+}
+```
+
+```bash curl
+curl -X POST "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add-bulk" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "item": {
+          "externalId": "sku-pasta-bolognese",
+          "title": "Pasta Bolognese",
+          "basePriceCents": 12900,
+          "category": "FOOD",
+          "allergens": ["GLUTEN", "MILK"]
+        },
+        "quantity": 5,
+        "discountPercentage": 50,
+        "date": "2024-12-20"
+      },
+      {
+        "item": {
+          "externalId": "sku-garlic-bread",
+          "title": "Garlic Bread",
+          "basePriceCents": 3900,
+          "category": "BAKERY",
+          "allergens": ["GLUTEN", "MILK"]
+        },
+        "quantity": 8,
+        "discountPercentage": 60,
+        "date": "2024-12-20"
+      }
+    ]
+  }'
+```
+</CodeTabs>
+
+**Response (207 Multi-Status):**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "results": [
+      { "index": 0, "surplusId": 88421, "itemId": 56789, "itemCreated": true,  "surplusCreated": true },
+      { "index": 1, "surplusId": 88422, "itemId": 56790, "itemCreated": false, "surplusCreated": true }
+    ],
+    "errors": []
+  },
+  "meta": {
+    "requestId": "req_abc123",
+    "timestamp": "2024-12-20T14:32:10.000Z",
+    "executionTimeMs": 312
+  }
+}
+```
+
+If some items fail, `status` becomes `"partial"` and the failures are listed under `errors` — the successful items are still created:
+
+```json
+{
+  "status": "partial",
+  "data": {
+    "results": [
+      { "index": 0, "surplusId": 88421, "itemId": 56789, "itemCreated": true, "surplusCreated": true }
+    ],
+    "errors": [
+      { "index": 1, "error": "Provide either date or validFrom" }
+    ]
+  }
+}
+```
+
+### Migration from karma-api (Semafor/ICA integration)
+
+If you were previously calling the legacy `karma-api` service, here is the field mapping to the new bulk endpoint:
+
+| Old karma-api field | New field | Notes |
+|---|---|---|
+| `integration_item_id` | `item.externalId` | Same stable product ID — keep it unchanged |
+| `title` | `item.title` | |
+| `base_price` | `item.basePriceCents` | Same unit (öre / pence / cents) |
+| `discount_percentage` | `discountPercentage` | Minimum is now 50 (was 40 with loyalty) |
+| `num` | `quantity` | |
+| `expiry_date` (`YYYY-MM-DD`) | `date` | Same format |
+| `image_url` | `item.imageUrl` | |
+| `gtin` | not a dedicated field | Pass as part of your `externalId` or omit |
+
+The old two-step flow (`POST /items` then `POST /sales/items`) collapses into a single call per item (or one bulk call). No separate "create sale" step is needed.
+
+### Limits and behaviour
+
+- Maximum **500 items** per request
+- Items are processed **sequentially** — one failure does not affect subsequent items
+- Uses the same **upsert semantics** as the single endpoint: if surplus for this `externalId` already exists on the given date, the quantity is replaced
+- Requires `surplus:create` permission on your API key (same as the single endpoint)
+
 ## Fetching Available Tag Keys
 
 Before you can set `category` or `allergens`, look up the tag keys your Karma account has configured:
@@ -544,6 +689,7 @@ function SurplusRow({ entry, locationId, apiKey, onUpdate }: {
 |--------|----------|-------------|
 | GET | `/api/v1/locations/:locationId/helpers/surplus` | **Helper:** List all surplus (all dates, includes externalId + status) |
 | POST | `/api/v1/locations/:locationId/helpers/surplus/add` | **Helper:** Find-or-create item and add surplus in one call |
+| POST | `/api/v1/locations/:locationId/helpers/surplus/add-bulk` | **Helper:** Bulk version — up to 500 items, partial success |
 | GET | `/api/v1/locations/:locationId/surplus` | List active/recent surplus entries for a location |
 | POST | `/api/v1/locations/:locationId/surplus` | Create a surplus entry (requires existing item ID) |
 | POST | `/api/v1/locations/:locationId/surplus/bulk` | Bulk-create surplus entries |

@@ -208,6 +208,17 @@ paths:
       responses:
         "200":
           description: Default Response
+  /api/v1/invoices/{invoiceId}/push-to-fortnox:
+    post:
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: invoiceId
+          required: true
+      responses:
+        "200":
+          description: Default Response
   /api/v1/locations/{locationId}/billing-contact:
     get:
       parameters:
@@ -319,6 +330,39 @@ paths:
                   items:
                     type: string
         required: true
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+  /api/v1/merchant/locations/{locationId}/integrations/fortnox/auth-url:
+    get:
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+  /api/v1/merchant/locations/{locationId}/integrations/fortnox/disconnect:
+    delete:
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+  /api/v1/merchant/locations/{locationId}/integrations/fortnox/status:
+    get:
       parameters:
         - schema:
             type: string
@@ -36125,6 +36169,505 @@ paths:
                   requestId: req_123456
                   timestamp: 2025-01-15T10:30:00.000Z
                   executionTimeMs: 10
+  /api/v1/locations/{locationId}/helpers/surplus:
+    get:
+      summary: List all surplus entries for a location (all dates)
+      tags:
+        - Helpers
+      description: >-
+        Returns all surplus entries for the location — past, active, and future
+        — enriched with
+
+        each item's `externalId` so external systems can reconcile against their
+        own product IDs.
+
+
+        Unlike the standard surplus list (which shows only active/recent
+        entries), this endpoint
+
+        covers all dates. Filter with `from` and `to` to narrow the window.
+
+
+        Each entry includes a `status` field: `active` (selling now), `upcoming`
+        (future date),
+
+        or `expired` (sell window has passed).
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: from
+          required: false
+          description: ISO date (YYYY-MM-DD). Only return entries with valid_from on or
+            after this date.
+        - schema:
+            type: string
+          in: query
+          name: to
+          required: false
+          description: ISO date (YYYY-MM-DD). Only return entries with valid_from on or
+            before this date.
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      surplusEntries:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            itemId:
+                              type: integer
+                            locationId:
+                              type: integer
+                            ministock:
+                              type: integer
+                            validFrom:
+                              type: string
+                            validUntil:
+                              type:
+                                - "null"
+                                - string
+                            discountPercentage:
+                              type:
+                                - "null"
+                                - integer
+                            overridePriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            computedPriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            note:
+                              type:
+                                - "null"
+                                - string
+                            status:
+                              type: string
+                              enum:
+                                - active
+                                - upcoming
+                                - expired
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                            item:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                externalId:
+                                  type:
+                                    - "null"
+                                    - string
+                                  description: Your system's identifier, set when pushing via the helper add
+                                    endpoint.
+                                name:
+                                  type: string
+                                description:
+                                  type:
+                                    - "null"
+                                    - string
+                                imageUrl:
+                                  type:
+                                    - "null"
+                                    - string
+                                basePriceCents:
+                                  type:
+                                    - "null"
+                                    - integer
+                  meta:
+                    type: object
+  /api/v1/locations/{locationId}/helpers/surplus/add:
+    post:
+      summary: Find-or-create an item and add it as surplus (single call)
+      tags:
+        - Helpers
+      description: >-
+        Helper endpoint for external POS systems. Pass either an existing
+        `itemId` or a full item
+
+        definition (with `externalId` for idempotent find-or-create). The
+        endpoint creates the item
+
+        in inventory if it does not yet exist, then upserts the surplus entry
+        for the given date.
+
+
+        **Date formats accepted:**
+
+        - `date` — single selling day (midnight → store closing time, resolved
+        from schedule)
+
+        - `validFrom` + `validUntil` — explicit ISO datetime range
+
+
+        **Upsert behaviour:** If a surplus entry already exists for this item on
+        the same `validFrom`,
+
+        the quantity (and other fields) are replaced with the new values.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                itemId:
+                  type: integer
+                  description: ID of an existing inventory item. Mutually exclusive with `item`.
+                item:
+                  type: object
+                  description: Item definition. Mutually exclusive with `itemId`.
+                  properties:
+                    externalId:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      description: Your system's identifier for the item. Used to look up or create
+                        the item.
+                    title:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                    description:
+                      type: string
+                      maxLength: 500
+                    imageUrl:
+                      type: string
+                      maxLength: 1024
+                    basePriceCents:
+                      type: integer
+                      minimum: 0
+                      description: Full (non-discounted) price in cents.
+                    category:
+                      type: string
+                      description: Existing category tag key, e.g. "FOOD", "BEVERAGE". See GET
+                        /api/v1/category-tags.
+                    allergens:
+                      type: array
+                      items:
+                        type: string
+                      description: Existing allergen tag keys, e.g. ["GLUTEN", "MILK"]. See GET
+                        /api/v1/category-tags.
+                  required:
+                    - externalId
+                    - title
+                    - basePriceCents
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: Number of surplus items to sell.
+                discountPercentage:
+                  type: integer
+                  minimum: 50
+                  maximum: 90
+                  description: Discount percentage off base price (50–90). Mutually exclusive with
+                    `overridePriceCents`.
+                overridePriceCents:
+                  type: integer
+                  minimum: 0
+                  description: Fixed surplus price in cents. Mutually exclusive with
+                    `discountPercentage`.
+                note:
+                  type: string
+                  maxLength: 500
+                date:
+                  type: string
+                  description: ISO date string (YYYY-MM-DD). The surplus is available from
+                    midnight to closing time on this day.
+                validFrom:
+                  type: string
+                  description: ISO date or datetime string for the start of the availability
+                    window.
+                validUntil:
+                  type: string
+                  description: ISO date or datetime string for the end of the availability window.
+              required:
+                - quantity
+        required: true
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+          description: Location to add surplus for
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      surplusEntry:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          itemId:
+                            type: integer
+                          locationId:
+                            type: integer
+                          ministock:
+                            type: integer
+                          validFrom:
+                            type: string
+                          validUntil:
+                            type:
+                              - "null"
+                              - string
+                          discountPercentage:
+                            type:
+                              - "null"
+                              - integer
+                          overridePriceCents:
+                            type:
+                              - "null"
+                              - integer
+                          note:
+                            type:
+                              - "null"
+                              - string
+                          createdAt:
+                            type: string
+                          updatedAt:
+                            type: string
+                      item:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          created:
+                            type: boolean
+                            description: true if the item was newly created by this call.
+                  meta:
+                    type: object
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      surplusEntry:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          itemId:
+                            type: integer
+                          locationId:
+                            type: integer
+                          ministock:
+                            type: integer
+                          validFrom:
+                            type: string
+                          validUntil:
+                            type:
+                              - "null"
+                              - string
+                          discountPercentage:
+                            type:
+                              - "null"
+                              - integer
+                          overridePriceCents:
+                            type:
+                              - "null"
+                              - integer
+                          note:
+                            type:
+                              - "null"
+                              - string
+                          createdAt:
+                            type: string
+                          updatedAt:
+                            type: string
+                      item:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          created:
+                            type: boolean
+                  meta:
+                    type: object
+  /api/v1/locations/{locationId}/helpers/surplus/add-bulk:
+    post:
+      summary: Bulk add surplus entries (find-or-create items)
+      tags:
+        - Helpers
+      description: "Add up to 500 surplus entries in a single call. Each item uses the
+        same find-or-create semantics as the single `/helpers/surplus/add`
+        endpoint — pass an `externalId` and item details; Karma looks up or
+        creates the inventory item automatically. Processing is sequential and
+        **partial success** is supported: if one item fails, the rest still
+        process. Check `data.errors` for per-item failures. For migrating from
+        the legacy karma-api Semafor integration: map `integration_item_id` →
+        `item.externalId`, `num` → `quantity`, `expiry_date` → `date`,
+        `base_price` → `item.basePriceCents`."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      itemId:
+                        type: integer
+                        description: ID of an existing inventory item. Mutually exclusive with `item`.
+                      item:
+                        type: object
+                        description: Item definition. Mutually exclusive with `itemId`.
+                        properties:
+                          externalId:
+                            type: string
+                            minLength: 1
+                            maxLength: 255
+                          title:
+                            type: string
+                            minLength: 1
+                            maxLength: 255
+                          description:
+                            type: string
+                            maxLength: 500
+                          imageUrl:
+                            type: string
+                            maxLength: 1024
+                          basePriceCents:
+                            type: integer
+                            minimum: 0
+                          category:
+                            type: string
+                          allergens:
+                            type: array
+                            items:
+                              type: string
+                        required:
+                          - externalId
+                          - title
+                          - basePriceCents
+                      quantity:
+                        type: integer
+                        minimum: 1
+                      discountPercentage:
+                        type: integer
+                        minimum: 50
+                        maximum: 90
+                      overridePriceCents:
+                        type: integer
+                        minimum: 0
+                      note:
+                        type: string
+                        maxLength: 500
+                      date:
+                        type: string
+                      validFrom:
+                        type: string
+                      validUntil:
+                        type: string
+                    required:
+                      - quantity
+                  minItems: 1
+                  maxItems: 500
+              required:
+                - items
+        required: true
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+          description: Location to add surplus for
+      responses:
+        "207":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                      - partial
+                  data:
+                    type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            index:
+                              type: integer
+                            surplusId:
+                              type: integer
+                            itemId:
+                              type: integer
+                            itemCreated:
+                              type: boolean
+                            surplusCreated:
+                              type: boolean
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            index:
+                              type: integer
+                            error:
+                              type: string
+                  meta:
+                    type: object
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                  meta:
+                    type: object
   /health:
     get:
       tags:
@@ -94204,6 +94747,16 @@ paths:
             type: boolean
             default: false
           in: query
+          name: keepActiveBeyondLimit
+          required: false
+          description: "KDS-only: apply `limit` to terminal/done dispatches only and
+            always return every active (in-progress) dispatch in the window, so
+            an open ticket never ages out of the newest-N set at a high-volume
+            venue. Leave off for paginated history/audit views."
+        - schema:
+            type: boolean
+            default: false
+          in: query
           name: excludeAbortedTabs
           required: false
           description: Hide KDs whose parent tab was force-closed (aborted). Use for the
@@ -94689,6 +95242,11 @@ paths:
                               format: date-time
                               nullable: true
                               description: Store commitment timeout for acceptance
+                            deliveredAt:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: When the dispatch was marked picked up / delivered (from event log)
                           required:
                             - uuid
                             - locationId
@@ -96278,6 +96836,11 @@ paths:
                         format: date-time
                         nullable: true
                         description: Store commitment timeout for acceptance
+                      deliveredAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: When the dispatch was marked picked up / delivered (from event log)
                     required:
                       - uuid
                       - locationId
@@ -100806,6 +101369,16 @@ paths:
           required: false
           description: Force PostgreSQL only (skip BigQuery). Use for KDS/real-time
             displays where state must be fresh.
+        - schema:
+            type: boolean
+            default: false
+          in: query
+          name: keepActiveBeyondLimit
+          required: false
+          description: "KDS-only: apply `limit` to terminal/done dispatches only and
+            always return every active (in-progress) dispatch in the window, so
+            an open ticket never ages out of the newest-N set at a high-volume
+            venue. Leave off for paginated history/audit views."
         - schema:
             type: boolean
             default: false
@@ -131425,6 +131998,101 @@ paths:
                   requestId: req_123456
                   timestamp: 2025-01-15T10:30:00.000Z
                   executionTimeMs: 10
+  /api/v1/reporting/export:
+    get:
+      summary: Generate and download a SIE / CSV / PDF accounting export
+      tags:
+        - Reporting
+      description: Server-side generation of the reporting export the frontend used to
+        build in the browser. Split flags and chart-of-account mappings are read
+        from the saved location_export_settings (sie) row. Output is
+        byte-identical to the frontend export.
+      parameters:
+        - schema:
+            type: integer
+          in: query
+          name: locationId
+          required: true
+          description: Location ID to export for
+        - schema:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+          in: query
+          name: startDate
+          required: true
+          description: Start date in YYYY-MM-DD format
+        - schema:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+          in: query
+          name: endDate
+          required: true
+          description: End date in YYYY-MM-DD format (inclusive)
+        - schema:
+            type: string
+            enum:
+              - sie
+              - csv
+              - pdf
+          in: query
+          name: format
+          required: true
+          description: Export file format
+      responses:
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: integer
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: integer
   /api/v1/reporting/export-settings:
     get:
       summary: Get saved accounting export configuration for a location
@@ -142638,6 +143306,436 @@ paths:
                   requestId: req_123456
                   timestamp: 2025-01-15T10:30:00.000Z
                   executionTimeMs: 10
+  /api/v1/locations/{locationId}/surplus:
+    get:
+      summary: List surplus entries for a location
+      tags:
+        - Surplus
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      surplusEntries:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            itemId:
+                              type: integer
+                            locationId:
+                              type: integer
+                            ministock:
+                              type: integer
+                            validFrom:
+                              type: string
+                            validUntil:
+                              type:
+                                - "null"
+                                - string
+                            discountPercentage:
+                              type:
+                                - "null"
+                                - integer
+                            overridePriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            computedPriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            note:
+                              type:
+                                - "null"
+                                - string
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                            item:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                name:
+                                  type: string
+                                description:
+                                  type:
+                                    - "null"
+                                    - string
+                                imageUrl:
+                                  type:
+                                    - "null"
+                                    - string
+                                basePriceCents:
+                                  type:
+                                    - "null"
+                                    - integer
+    post:
+      summary: Create a surplus entry
+      tags:
+        - Surplus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                itemId:
+                  type: integer
+                ministock:
+                  type: integer
+                  minimum: 1
+                validFrom:
+                  type: string
+                validUntil:
+                  type: string
+                discountPercentage:
+                  type: integer
+                  minimum: 50
+                  maximum: 90
+                overridePriceCents:
+                  type: integer
+                  minimum: 0
+                note:
+                  type: string
+                  maxLength: 500
+              required:
+                - itemId
+                - ministock
+                - validFrom
+        required: true
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/v1/locations/{locationId}/surplus/{id}:
+    put:
+      summary: Update a surplus entry
+      tags:
+        - Surplus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ministock:
+                  type: integer
+                  minimum: 1
+                validFrom:
+                  type: string
+                validUntil:
+                  type:
+                    - string
+                    - "null"
+                discountPercentage:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 50
+                  maximum: 90
+                overridePriceCents:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 0
+                note:
+                  type:
+                    - string
+                    - "null"
+                  maxLength: 500
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+        - schema:
+            type: integer
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+    delete:
+      summary: Delete a surplus entry
+      tags:
+        - Surplus
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+        - schema:
+            type: integer
+          in: path
+          name: id
+          required: true
+      responses:
+        "204":
+          description: Default Response
+  /api/v1/locations/{locationId}/surplus/active:
+    get:
+      summary: Get today's active surplus items (public)
+      tags:
+        - Surplus
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      surplusEntries:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            itemId:
+                              type: integer
+                            locationId:
+                              type: integer
+                            ministock:
+                              type: integer
+                            validFrom:
+                              type: string
+                            validUntil:
+                              type:
+                                - "null"
+                                - string
+                            discountPercentage:
+                              type:
+                                - "null"
+                                - integer
+                            overridePriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            computedPriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            note:
+                              type:
+                                - "null"
+                                - string
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                            item:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                name:
+                                  type: string
+                                description:
+                                  type:
+                                    - "null"
+                                    - string
+                                imageUrl:
+                                  type:
+                                    - "null"
+                                    - string
+                                basePriceCents:
+                                  type:
+                                    - "null"
+                                    - integer
+  /api/v1/locations/{locationId}/surplus/bulk:
+    post:
+      summary: Bulk create surplus entries (returns partial results)
+      tags:
+        - Surplus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  maxItems: 50
+                  items:
+                    type: object
+                    properties:
+                      itemId:
+                        type: integer
+                      ministock:
+                        type: integer
+                        minimum: 1
+                      validFrom:
+                        type: string
+                      validUntil:
+                        type: string
+                      discountPercentage:
+                        type: integer
+                        minimum: 50
+                        maximum: 90
+                      overridePriceCents:
+                        type: integer
+                        minimum: 0
+                      note:
+                        type: string
+                        maxLength: 500
+                    required:
+                      - itemId
+                      - ministock
+                      - validFrom
+              required:
+                - items
+        required: true
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      created:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            itemId:
+                              type: integer
+                            locationId:
+                              type: integer
+                            ministock:
+                              type: integer
+                            validFrom:
+                              type: string
+                            validUntil:
+                              type:
+                                - "null"
+                                - string
+                            discountPercentage:
+                              type:
+                                - "null"
+                                - integer
+                            overridePriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            computedPriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            note:
+                              type:
+                                - "null"
+                                - string
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                            item:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                name:
+                                  type: string
+                                description:
+                                  type:
+                                    - "null"
+                                    - string
+                                imageUrl:
+                                  type:
+                                    - "null"
+                                    - string
+                                basePriceCents:
+                                  type:
+                                    - "null"
+                                    - integer
+                      conflicts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            itemId:
+                              type: integer
+                            itemName:
+                              type: string
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            itemId:
+                              type: integer
+                            message:
+                              type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: number
   /api/v1/table-groups:
     get:
       summary: List table groups
@@ -149822,6 +150920,19 @@ paths:
             paying user and includes a shopperReference so Adyen returns
             storedPaymentMethods (saved cards) for the shopper. Omit for guest
             checkouts.
+        - schema:
+            type: string
+            enum:
+              - iOS
+              - Android
+              - Web
+          in: query
+          name: channel
+          required: false
+          description: Optional client platform. Forwarded to Adyen /paymentMethods so it
+            returns platform-native wallets — notably Google Pay (returned only
+            for channel=Android). Omit for web (Adyen defaults to Web
+            behaviour).
         - schema:
             type: string
             format: uuid
@@ -185443,12 +186554,18 @@ tags:
     description: Customer reviews and feedback for purchases
   - name: Roles
     description: Role management with permission assignment
+  - name: Helpers
+    description: High-level helper endpoints that combine multiple operations into a
+      single call (e.g. find-or-create item and add surplus)
   - name: Schedules
     description: Operating hours and special schedules
   - name: Settlements
     description: Tab settlements and payment groupings
   - name: Statistics
     description: Sales statistics, time series, and aggregated data
+  - name: Surplus
+    description: Surplus inventory — food items pushed to Karma for end-of-day sale
+      at a discount
   - name: Table Groups
     description: Table grouping and floor plans
   - name: Tables
