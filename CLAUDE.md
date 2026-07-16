@@ -35,6 +35,20 @@ The OpenAPI spec is **not fetched live**. The site renders from a committed snap
    grep -c "<yourNewField>" /tmp/api-docs/openapi.json
    ```
 
+1b. **Generate the changelog entry** — run this *before* step 2 overwrites
+   `public/latest/openapi.json`, so the diff compares the new export against the
+   currently-published spec:
+   ```bash
+   npm run changelog -- --new /tmp/api-docs/openapi.json
+   # optional: --commit <sha> --date YYYY-MM-DD --dry-run
+   ```
+   This diffs the specs, writes a human entry (via Claude — needs `ANTHROPIC_API_KEY`;
+   falls back to a structural-only entry without it, and is a no-op when nothing changed),
+   prepends it to `changelog.json` (source of truth), and regenerates the pre-rendered
+   `pages/changelog.mdx`. **Review both files** before continuing — edit `changelog.json`
+   and re-run if the wording needs work (`pages/changelog.mdx` is generated; don't hand-edit
+   it). The `changelog.mdx` change is picked up by the normal build in step 3.
+
 2. **Copy the spec** into this repo. The site renders from `public/latest/` (this is the
    path `zudoku.config.ts` reads via its `apis` array). Also update the matching specific
    version dir under `public/versions/` (its name matches `version.json`'s `version`):
@@ -87,7 +101,9 @@ The OpenAPI spec is **not fetched live**. The site renders from a committed snap
 |------|----------|
 | `zudoku.config.ts` | Site config, branding, navigation, multi-version `apis` array (inputs point at `./public/latest/openapi.json` and `./public/versions/.../openapi.json`) |
 | `zudoku.build.ts` | Build-time processor that merges `specs/` fragments (custom integrations, webhook events) into each version's spec and computes `x-tagGroups` |
-| `pages/` | Hand-written MDX pages (Introduction, Examples, prose) |
+| `pages/` | Hand-written MDX pages (Introduction, Examples, prose). **Exception:** `pages/changelog.mdx` is GENERATED from `changelog.json` — don't hand-edit it |
+| `changelog.json` | Source of truth for the API changelog; edited by `scripts/generate-changelog.mjs` (or by hand, then rebuild `pages/changelog.mdx`) |
+| `scripts/generate-changelog.mjs` | Diffs a new OpenAPI export against the published spec, writes a changelog entry via Claude, regenerates `pages/changelog.mdx`. Run via `npm run changelog` in the publish flow (step 1b) |
 | `specs/` | OpenAPI **fragments** consumed only at build time (NOT the main API spec) |
 | `public/` | Served verbatim — `public/latest/openapi.json` is the rendered source of truth; also preserves `/versions/...`, `/CNAME` |
 | `dist/` | Build output, **committed** and published to Pages by `deploy.yml` |

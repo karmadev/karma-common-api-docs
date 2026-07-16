@@ -1,0 +1,104 @@
+---
+title: Sales Data Model & Semantics
+description: How to read purchases and line items correctly — which rows are sales, which cents field is authoritative, VAT, discounts, modifiers, refunds, and matching lines to your own catalogue.
+---
+
+This guide explains how to interpret the purchase and line-item data returned by
+[`GET /api/v1/purchases`](/api/latest#tag/Purchases), so an accounting, inventory, or
+BI integration reads the numbers the same way Karma does. It complements the field
+descriptions on the endpoint itself.
+
+## The shape
+
+A **purchase** is one payment. It has a `status`, an `amount` (total, in cents), a
+`currency`, timestamps, and a list of **line items**. Each line item is one thing on the
+receipt — a product, a tip, or an amount paid toward a split bill.
+
+All money is in **integer minor units** (öre/cents), and all prices are **VAT-inclusive**.
+
+## Which purchases are sales?
+
+Treat a purchase as a finalized sale only when:
+
+```
+status === "confirmed"
+```
+
+`pending` is in-flight, and `canceled` / `failed` never took payment. Filter server-side
+with the `status` query parameter.
+
+## Which line items are products?
+
+Line items have a `type`:
+
+| `type` | Meaning | Include in a product-sales export? |
+|--------|---------|-----------------------------------|
+| `product` | A sellable catalogue item | **Yes** |
+| `tip` | A gratuity line | No |
+| `amount` | An abstract amount paid toward a split/partial bill | No |
+
+Discounts are **not** separate line items — they are a field on the product line (see
+below).
+
+## Prices, quantity, and VAT
+
+Read these fields per line item:
+
+| Field | What it is |
+|-------|-----------|
+| `finalAmountCents` | **Authoritative per-unit price**, VAT-inclusive, **after** discount. |
+| `totalAmountCents` | Line total = `finalAmountCents × quantity`. **May be null/0 on some legacy purchases** — if you need a guaranteed line total, compute `finalAmountCents × quantity` yourself. |
+| `appliedTotalDiscountAmountCents` | Discount on this line, a positive number, **already subtracted** from the amounts above. Gross before discount = `totalAmountCents + appliedTotalDiscountAmountCents`. |
+| `quantity` | Whole-unit count. |
+| `quantityCents` | `quantity × 100` — divide by 100 for fractional/weight-based items. |
+| `vatRateBasisPoints` | VAT rate in basis points; `÷ 100` for the percentage (`1200` → 12%, `2500` → 25%). |
+| `vatAmountCents` | VAT **per unit** (already contained in `finalAmountCents`). |
+| `totalVatAmountCents` | VAT for the whole line = `vatAmountCents × quantity`. |
+
+> **Don't rely on `pre_discount_value_cents` or `total_with_modifications_cents`.** The
+> former no longer exists; the latter is rarely populated. `finalAmountCents` +
+> `appliedTotalDiscountAmountCents` are the fields to build on.
+
+## Modifiers and bundles
+
+Modifiers show up two ways:
+
+- **Inline**, in `appliedModifications` — an array like
+  `[{ title, priceAdjustmentCents, variantRef? }]`. Discounts and vouchers appear here as
+  negative `priceAdjustmentCents`. These entries **do not** carry an article number.
+- **As child line items**, when a variant/add-on maps to its own catalogue item. The child
+  row points at its parent via `parentLineItemId`.
+
+> ⚠️ **Avoid double-counting.** Because add-ons can appear as separate child lines, summing
+> every line's total can over- or under-count a bundle depending on how the product is
+> modelled. Reconcile your per-purchase line sum against the purchase `amount` as a check.
+
+## Matching a sale line to your own product catalogue
+
+`articleNo` is a **Karma-internal reference used for fiscal cash-register registration** —
+despite the name it is **not** your SKU/PLU/article number, and it will not match your
+catalogue.
+
+To link a sale line to your own product, use **`originItemId`** — the catalogue item the
+line was sold from. Join `originItemId` to the item, where your own external article number
+lives (populated from your inventory/POS setup). That join, not `articleNo`, is the stable
+key to your catalogue.
+
+## Refunds
+
+Refunds are represented against the purchase. Refund amounts are stored as **positive**
+values (the magnitude refunded) — negate them for a ledger. A refund is valid once it is
+`confirmed`.
+
+## Timing: when is a sale final?
+
+There is no single "finalized at" flag. In practice:
+
+- A purchase's payment is final at `status === "confirmed"`.
+- Fee and settlement data can be written **asynchronously after capture** (minutes to a
+  couple of hours later), so if you need fees, don't treat a just-confirmed purchase as
+  complete for fee purposes.
+- Late corrections and refunds can arrive afterward.
+
+A safe pattern is to only export purchases that have been settled for a few hours, and to
+re-poll on the update timestamp to catch late changes.

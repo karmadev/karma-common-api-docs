@@ -1,0 +1,50 @@
+{
+  "_note": "Source of truth for the API changelog. pages/changelog.mdx is GENERATED from this file by scripts/generate-changelog.mjs — edit this file (or run the generator), not the MDX. Newest entry first.",
+  "entries": [
+    {
+      "date": "2026-06-28",
+      "version": "v20260131-1317-1",
+      "commit": "0e469b4",
+      "summary": "Added a bulk surplus upload endpoint so POS integrations can push surplus inventory directly.",
+      "changes": [
+        { "type": "added", "text": "Bulk surplus upload endpoint for pushing surplus from your own POS." }
+      ]
+    },
+    {
+      "date": "2026-06-23",
+      "version": "v20260131-1317-1",
+      "commit": "d4ad57e",
+      "summary": "Order line items now carry per-item VAT fields.",
+      "changes": [
+        { "type": "added", "text": "Order line items expose per-item vatRateBasisPoints and vatAmountCents." }
+      ]
+    },
+    {
+      "date": "2026-06-16",
+      "version": "v20260131-1317-1",
+      "commit": "b647cd6",
+      "summary": "Purchase line items now expose per-line VAT.",
+      "changes": [
+        { "type": "added", "text": "Per-line-item VAT (vatRateBasisPoints, vatAmountCents) on purchases." }
+      ]
+    },
+    {
+      "date": "2026-05-31",
+      "version": "v20260131-1317-1",
+      "commit": "d570182",
+      "summary": "Introduced the public Order endpoint for placing orders.",
+      "changes": [
+        { "type": "added", "text": "Public Order endpoint (place an order), with a worked example." }
+      ]
+    },
+    {
+      "date": "2026-05-12",
+      "version": "v20260131-1317-1",
+      "commit": "60eb7d0",
+      "summary": "First published version of the Karma Common API documentation.",
+      "changes": [
+        { "type": "added", "text": "Initial public API reference, examples, and getting-started guide." }
+      ]
+    }
+  ]
+}

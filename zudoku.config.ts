@@ -144,10 +144,16 @@ const config: ZudokuConfig = {
       items: [
         "examples/place-an-order",
         "examples/nightly-sales-data",
+        "examples/sales-data-model",
         "examples/inventory-sync",
         "examples/push-surplus-from-pos",
         "examples/realtime-webhooks",
       ],
+    },
+    {
+      type: "doc",
+      file: "changelog",
+      label: "Changelog",
     },
   ],
 

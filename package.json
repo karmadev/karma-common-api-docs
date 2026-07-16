@@ -7,11 +7,15 @@
   "scripts": {
     "dev": "zudoku dev",
     "build": "NODE_OPTIONS='--max-old-space-size=8192' zudoku build",
-    "preview": "zudoku build && npx serve dist"
+    "preview": "zudoku build && npx serve dist",
+    "changelog": "node scripts/generate-changelog.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zudoku": "^0.77.0"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.68.0"
   }
 }

@@ -1,0 +1,1 @@
+{"version":3,"file":"__vite-optional-peer-dep_mermaid_zudoku-D-8QIqLR.js","names":[],"sources":["../../__vite-optional-peer-dep:mermaid:zudoku"],"sourcesContent":["export default {};\nthrow new Error(`Could not resolve \"mermaid\" imported by \"zudoku\". Is it installed?`)"],"mappings":"AAAA,IAAA,EAAe,EAAE,CACjB,MAAU,MAAM,qEAAA"}
