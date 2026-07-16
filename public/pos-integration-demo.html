@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Karma × Your POS — Surplus Integration Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --paper:      #F4F2EC;
+    --panel:      #FFFFFF;
+    --ink:        #16181D;
+    --muted:      #6B7280;
+    --line:       #E4E1D8;
+
+    --karma:      #0E9F6E;
+    --karma-deep: #065F46;
+    --karma-tint: #E7F6EF;
+
+    --pos:        #334155;
+    --pos-tint:   #EEF1F5;
+
+    --console:    #0D1117;
+    --console-2:  #161B22;
+    --console-ink:#C9D1D9;
+    --console-mut:#6E7681;
+
+    --out:        #2563EB;   /* POS → Karma (REST request) */
+    --in:         #10B981;   /* Karma → POS (webhook)      */
+    --amber:      #D97706;
+
+    --r:          14px;
+    --mono: 'IBM Plex Mono', ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 600px at 85% -5%, #EAF6F0 0%, transparent 55%),
+      radial-gradient(900px 500px at 0% 0%, #F1EFE6 0%, transparent 50%),
+      var(--paper);
+    line-height: 1.5;
+  }
+  a { color: var(--karma-deep); }
+
+  .wrap { max-width: 1360px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ---------- Header ---------- */
+  header.hero { margin-bottom: 28px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--karma-deep); font-weight: 600;
+  }
+  h1.title {
+    font-size: clamp(30px, 4.4vw, 52px);
+    line-height: 1.02; letter-spacing: -.02em; font-weight: 700;
+    margin: 10px 0 12px;
+  }
+  h1.title em { font-style: normal; color: var(--karma); }
+  .lede { max-width: 60ch; color: #3a3f47; font-size: 17px; margin: 0 0 22px; }
+
+  .runbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    font-family: var(--sans); font-weight: 600; font-size: 15px;
+    border: none; border-radius: 999px; padding: 12px 22px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 9px; transition: transform .12s ease, box-shadow .12s ease, background .15s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--karma); color: #fff; box-shadow: 0 6px 18px -6px rgba(14,159,110,.6); }
+  .btn-primary:hover { background: #0c8b60; }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+  .btn-ghost:hover { border-color: #cfccc2; background: #fff; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .basebadge {
+    font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+    background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
+  }
+  .basebadge b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Stage ---------- */
+  .stage {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr 0.92fr;
+    gap: 18px; margin-top: 30px; align-items: start;
+  }
+  .col-head {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 12px;
+  }
+  .col-head .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .col-head h2 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.01em; }
+  .col-head .tag { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+    box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 18px 40px -32px rgba(0,0,0,.35);
+  }
+  .panel-pad { padding: 16px; }
+
+  /* POS column */
+  .pos-sub { font-size: 12.5px; color: var(--muted); margin: 0 0 14px; }
+  .inv-row {
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center;
+    padding: 12px; border: 1px solid var(--line); border-radius: 11px; margin-bottom: 10px;
+    background: #fff; transition: border-color .2s, background .2s;
+  }
+  .inv-row .emoji { font-size: 26px; text-align: center; }
+  .inv-row .nm { font-weight: 600; font-size: 14.5px; }
+  .inv-row .meta { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .inv-row.pushed { border-color: var(--karma); background: var(--karma-tint); }
+  .inv-row.sold { opacity: .72; }
+  .stockpill {
+    font-family: var(--mono); font-size: 11.5px; color: var(--pos);
+    background: var(--pos-tint); border-radius: 7px; padding: 2px 7px; margin-top: 3px; display: inline-block;
+  }
+  .row-actions { text-align: right; }
+  .mini {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 600; border-radius: 8px;
+    border: 1.5px solid var(--karma); color: var(--karma-deep); background: #fff;
+    padding: 7px 11px; cursor: pointer; white-space: nowrap; transition: background .15s;
+  }
+  .mini:hover { background: var(--karma-tint); }
+  .mini:disabled { border-color: var(--line); color: var(--muted); cursor: default; background: #fff; }
+  .pushed-flag { font-family: var(--mono); font-size: 10.5px; color: var(--karma-deep); font-weight: 600; }
+  .sold-flag { font-family: var(--mono); font-size: 10.5px; color: var(--amber); font-weight: 600; }
+
+  /* Console column */
+  .console {
+    background: var(--console); border: 1px solid #21262d; border-radius: var(--r);
+    overflow: hidden; display: flex; flex-direction: column; min-height: 520px;
+  }
+  .console-bar {
+    display: flex; align-items: center; gap: 7px; padding: 12px 14px;
+    border-bottom: 1px solid #21262d; background: var(--console-2);
+  }
+  .console-bar .tl { width: 11px; height: 11px; border-radius: 50%; }
+  .console-bar .label {
+    margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--console-mut);
+    letter-spacing: .04em;
+  }
+  .console-bar .clear {
+    margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--console-mut);
+    background: transparent; border: 1px solid #30363d; border-radius: 6px; padding: 4px 9px; cursor: pointer;
+  }
+  .console-bar .clear:hover { color: var(--console-ink); border-color: #484f58; }
+  .stream { padding: 14px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; max-height: 620px; }
+  .empty {
+    color: var(--console-mut); font-family: var(--mono); font-size: 12.5px; text-align: center;
+    margin: auto; padding: 30px 10px; line-height: 1.9;
+  }
+  .card {
+    border-radius: 10px; overflow: hidden; border: 1px solid #21262d;
+    animation: slidein .34s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes slidein { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+  .card-head {
+    display: flex; align-items: center; gap: 9px; padding: 9px 12px;
+    font-family: var(--mono); font-size: 12px; color: var(--console-ink);
+  }
+  .verb {
+    font-weight: 600; font-size: 10.5px; letter-spacing: .06em; border-radius: 5px; padding: 2px 7px; color: #fff;
+  }
+  .verb.post { background: var(--out); }
+  .verb.get  { background: #6b7280; }
+  .verb.hook { background: var(--in); }
+  .card-head .path { color: var(--console-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card-head .dir { margin-left: auto; font-size: 10.5px; color: var(--console-mut); white-space: nowrap; }
+  .card.req  { background: #0f1620; } .card.req  .card-head { border-bottom: 1px solid #182231; }
+  .card.res  { background: #0e1a14; } .card.res  .card-head { border-bottom: 1px solid #12291d; }
+  .card.hook { background: #0e1a14; border-color: #14432f; } .card.hook .card-head { border-bottom: 1px solid #14432f; }
+  .status { font-weight: 600; }
+  .status.ok  { color: #56d364; }
+  .status.created { color: #56d364; }
+  pre.body {
+    margin: 0; padding: 11px 13px; font-family: var(--mono); font-size: 11.5px; line-height: 1.6;
+    color: var(--console-ink); overflow-x: auto; white-space: pre;
+  }
+  .body .k { color: #79c0ff; }   /* keys */
+  .body .s { color: #a5d6ff; }   /* strings */
+  .body .n { color: #f2cc60; }   /* numbers */
+  .body .b { color: #ff7b72; }   /* booleans/null */
+  .hdr { color: var(--console-mut); }
+
+  /* Karma phone column */
+  .phone {
+    background: linear-gradient(180deg,#0b3d2c 0%, #0a2c20 100%);
+    border-radius: 30px; padding: 12px; border: 1px solid #0a2418;
+    box-shadow: 0 30px 60px -40px rgba(6,60,40,.9), inset 0 0 0 2px rgba(255,255,255,.04);
+  }
+  .phone-screen { background: #fff; border-radius: 22px; overflow: hidden; min-height: 480px; display: flex; flex-direction: column; }
+  .phone-top {
+    background: var(--karma); color: #fff; padding: 16px 16px 14px;
+  }
+  .phone-top .brand { font-weight: 700; letter-spacing: -.01em; font-size: 16px; display:flex; align-items:center; gap:7px; }
+  .phone-top .loc { font-size: 12px; opacity: .85; font-family: var(--mono); margin-top: 3px; }
+  .feed { padding: 12px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 11px; max-height: 520px; }
+  .feed-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 16px; line-height: 1.7; }
+  .listing {
+    border: 1px solid var(--line); border-radius: 13px; overflow: hidden; background: #fff;
+    animation: slidein .34s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .listing .li-emoji { font-size: 30px; padding: 14px 14px 0; }
+  .listing .li-body { padding: 6px 14px 14px; }
+  .listing .li-nm { font-weight: 600; font-size: 14.5px; }
+  .listing .li-desc { font-size: 12px; color: var(--muted); margin: 2px 0 9px; }
+  .price { display: flex; align-items: baseline; gap: 8px; }
+  .price .now { font-weight: 700; font-size: 17px; color: var(--karma-deep); }
+  .price .was { font-size: 12.5px; color: var(--muted); text-decoration: line-through; }
+  .price .off { font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: #fff; background: var(--karma); border-radius: 5px; padding: 2px 6px; margin-left: auto; }
+  .li-foot { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
+  .leftpill { font-family: var(--mono); font-size: 11px; color: var(--pos); background: var(--pos-tint); border-radius: 7px; padding: 3px 8px; }
+  .buy {
+    margin-left: auto; background: var(--karma); color: #fff; border: none; border-radius: 9px;
+    font-weight: 600; font-size: 13px; padding: 9px 16px; cursor: pointer; font-family: var(--sans);
+  }
+  .buy:hover { background: #0c8b60; }
+  .buy:disabled { background: #cbd5cf; cursor: default; }
+  .soldout { margin-left: auto; font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--amber); }
+
+  /* ---------- Reference ---------- */
+  .ref { margin-top: 44px; }
+  .ref h2.sec { font-size: 22px; font-weight: 700; letter-spacing: -.015em; margin: 0 0 4px; }
+  .ref .sec-sub { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+  .tab {
+    font-family: var(--sans); font-weight: 600; font-size: 14px; color: var(--muted);
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    padding: 10px 14px; cursor: pointer; margin-bottom: -1px;
+  }
+  .tab.active { color: var(--karma-deep); border-bottom-color: var(--karma); }
+  .tab:hover { color: var(--ink); }
+  .tabpanel { display: none; animation: fade .25s ease both; }
+  .tabpanel.active { display: block; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td code, .inl { font-family: var(--mono); font-size: 12.5px; background: #f0eee6; border-radius: 5px; padding: 1px 6px; }
+  .m-post { color: var(--out); font-weight: 600; } .m-get { color: #6b7280; font-weight: 600; }
+  .m-put { color: var(--amber); font-weight: 600; } .m-del { color: #dc2626; font-weight: 600; }
+  .evt { font-family: var(--mono); font-size: 12.5px; color: var(--karma-deep); font-weight: 600; }
+
+  .codeblock {
+    background: var(--console); border: 1px solid #21262d; border-radius: 12px; overflow: hidden; margin: 0 0 16px;
+  }
+  .codeblock .cb-head {
+    display: flex; align-items: center; padding: 9px 14px; border-bottom: 1px solid #21262d; background: var(--console-2);
+  }
+  .codeblock .cb-title { font-family: var(--mono); font-size: 12px; color: var(--console-mut); }
+  .codeblock .copy { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--console-mut); background: transparent; border: 1px solid #30363d; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  .codeblock .copy:hover { color: var(--console-ink); border-color: #484f58; }
+  .codeblock pre { margin: 0; padding: 14px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.65; color: var(--console-ink); }
+  .callout {
+    border-left: 3px solid var(--karma); background: var(--karma-tint); border-radius: 0 10px 10px 0;
+    padding: 12px 16px; font-size: 13.5px; margin: 6px 0 18px; color: #22402f;
+  }
+  .callout.amber { border-left-color: var(--amber); background: #fdf3e6; color: #6b4308; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  .steps li { position: relative; padding: 4px 0 16px 44px; border-left: 2px solid var(--line); margin-left: 14px; }
+  .steps li:last-child { border-left-color: transparent; }
+  .steps li::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; left: -15px; top: 0; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--karma); color: #fff; font-family: var(--mono); font-weight: 600; font-size: 13px;
+    display: grid; place-items: center;
+  }
+  .steps li b { font-size: 14.5px; }
+  .steps li p { margin: 3px 0 0; font-size: 13.5px; color: #40454d; }
+  .steps code { font-family: var(--mono); font-size: 12.5px; background: #f0eee6; border-radius: 5px; padding: 1px 6px; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 1080px) {
+    .stage { grid-template-columns: 1fr; }
+    .console { min-height: 420px; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card, .listing, .tabpanel { animation: none !important; }
+    .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="eyebrow">Karma Common API · Integration Guide</div>
+    <h1 class="title">Put surplus on Karma<br />straight from <em>your POS</em>.</h1>
+    <p class="lede">
+      Your point-of-sale already knows what's left at close. This is the round trip:
+      push that surplus to Karma with one REST call, let guests buy it in the Karma app,
+      and get the sale back on a webhook — so your stock stays in sync without a soul touching a screen.
+      Press play and watch every request and event fly across the wire.
+    </p>
+    <div class="runbar">
+      <button class="btn btn-primary" id="playBtn">▶&nbsp; Run the full flow</button>
+      <button class="btn btn-ghost" id="resetBtn">Reset</button>
+      <span class="basebadge">Base URL&nbsp; <b>https://common-api.karma.life</b></span>
+      <span class="basebadge">Auth&nbsp; <b>X-API-Key</b></span>
+    </div>
+  </header>
+
+  <!-- ================= STAGE ================= -->
+  <div class="stage">
+
+    <!-- POS -->
+    <section>
+      <div class="col-head">
+        <span class="dot" style="background:var(--pos)"></span>
+        <h2>Your POS — end of day</h2>
+        <span class="tag">merchant side</span>
+      </div>
+      <div class="panel panel-pad">
+        <p class="pos-sub">Stock left after service. Push what would otherwise be binned →</p>
+        <div id="inventory"></div>
+      </div>
+    </section>
+
+    <!-- CONSOLE -->
+    <section>
+      <div class="col-head">
+        <span class="dot" style="background:var(--out)"></span>
+        <h2>Integration traffic</h2>
+        <span class="tag">REST out · webhooks in</span>
+      </div>
+      <div class="console">
+        <div class="console-bar">
+          <span class="tl" style="background:#ff5f56"></span>
+          <span class="tl" style="background:#ffbd2e"></span>
+          <span class="tl" style="background:#27c93f"></span>
+          <span class="label">common-api.karma.life</span>
+          <button class="clear" id="clearBtn">clear</button>
+        </div>
+        <div class="stream" id="stream">
+          <div class="empty" id="streamEmpty">
+            Waiting for traffic…<br />
+            <span style="color:#3f8f6a">POST</span> requests go out when you push surplus.<br />
+            <span style="color:#3f8f6a">WEBHOOK</span> events come back when a guest buys.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KARMA APP -->
+    <section>
+      <div class="col-head">
+        <span class="dot" style="background:var(--karma)"></span>
+        <h2>Karma app — the guest</h2>
+        <span class="tag">consumer side</span>
+      </div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="phone-top">
+            <div class="brand">◈ Karma</div>
+            <div class="loc">Nonna's Kitchen · 400m away</div>
+          </div>
+          <div class="feed" id="feed">
+            <div class="feed-empty" id="feedEmpty">Nothing here yet.<br />Surplus you push appears instantly for nearby guests.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= REFERENCE ================= -->
+  <div class="ref">
+    <h2 class="sec">The integration, spelled out</h2>
+    <p class="sec-sub">Everything the demo does above, as copy-pasteable contract.</p>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="flow">How it works</button>
+      <button class="tab" data-tab="push">Push endpoints</button>
+      <button class="tab" data-tab="hooks">Webhooks to listen to</button>
+      <button class="tab" data-tab="auth">Auth &amp; setup</button>
+    </div>
+
+    <!-- FLOW -->
+    <div class="tabpanel active" data-panel="flow">
+      <ol class="steps">
+        <li>
+          <b>Get an API key &amp; location ID</b>
+          <p>Ask Karma for a key scoped to your location(s) with <code>surplus.create</code>, <code>surplus.read</code>, and <code>webhooks.create</code>. Your location ID is in the Merchant dashboard under Settings → Integrations. Every request carries it in the header <code>X-API-Key</code>.</p>
+        </li>
+        <li>
+          <b>Push surplus when service ends</b>
+          <p>One call per item (or up to 500 in a bulk call): <code>POST /api/v1/locations/:locationId/helpers/surplus/add</code>. Pass your own <code>externalId</code> (SKU/PLU) — Karma finds-or-creates the catalogue item, then upserts today's surplus quantity. It's live for nearby guests immediately.</p>
+        </li>
+        <li>
+          <b>Register a webhook once</b>
+          <p><code>POST /api/v1/webhooks/subscriptions</code> with your HTTPS URL, the events you care about, and a signing <code>secret</code>. Karma will POST every matching event to you.</p>
+        </li>
+        <li>
+          <b>Receive the sale, decrement your stock</b>
+          <p>When a guest buys, Karma sends <span class="evt">order.created</span> (the pickup order) then <span class="evt">tab.payment_completed</span> (money settled). Verify the <code>X-Webhook-Signature</code> HMAC, then knock the sold quantity off your POS. No polling.</p>
+        </li>
+        <li>
+          <b>Push absolute quantities, not deltas</b>
+          <p>Sold 3 in-store after pushing 8? Push <code>quantity: 5</code>. Karma <em>replaces</em> the number — the same upsert keeps both systems honest all day.</p>
+        </li>
+      </ol>
+      <div class="callout">
+        <b>The mental model:</b> REST is how you <em>tell</em> Karma about surplus. Webhooks are how Karma <em>tells you</em> what happened to it. Together they keep one truth about stock across two systems.
+      </div>
+    </div>
+
+    <!-- PUSH -->
+    <div class="tabpanel" data-panel="push">
+      <table>
+        <thead><tr><th style="width:70px">Method</th><th>Endpoint</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td class="m-post">POST</td><td><code>/api/v1/locations/:locationId/helpers/surplus/add</code></td><td>Find-or-create item by <code>externalId</code> and upsert today's surplus in one call. The main endpoint.</td></tr>
+          <tr><td class="m-post">POST</td><td><code>/api/v1/locations/:locationId/helpers/surplus/add-bulk</code></td><td>Same, up to 500 items, per-item errors (207 Multi-Status).</td></tr>
+          <tr><td class="m-get">GET</td><td><code>/api/v1/locations/:locationId/helpers/surplus</code></td><td>List everything you pushed — includes your <code>externalId</code> + computed <code>status</code>.</td></tr>
+          <tr><td class="m-put">PUT</td><td><code>/api/v1/locations/:locationId/surplus/:id</code></td><td>Update <code>ministock</code>, discount, note, or valid window.</td></tr>
+          <tr><td class="m-del">DELETE</td><td><code>/api/v1/locations/:locationId/surplus/:id</code></td><td>Pull an entry (204). Sold-out entries deactivate on their own.</td></tr>
+          <tr><td class="m-get">GET</td><td><code>/api/v1/category-tags</code></td><td>Valid <code>category</code> &amp; <code>allergen</code> keys (filter <code>?type=ALLERGEN</code>).</td></tr>
+        </tbody>
+      </table>
+
+      <div class="grid2" style="margin-top:20px">
+        <div class="codeblock">
+          <div class="cb-head"><span class="cb-title">push-surplus.ts · SDK</span><button class="copy" data-copy="sdk">copy</button></div>
+          <pre id="code-sdk">import { createKarmaClient } from '@karmalicious/karma-api-js'
+
+const client = createKarmaClient({
+  apiKey: process.env.KARMA_API_KEY!,
+  locationId: 1234,
+})
+
+const { surplusEntry, item } = await client.surplus.add({
+  item: {
+    externalId: 'sku-pasta-bolognese',   // your stable SKU/PLU
+    title: 'Pasta Bolognese',
+    basePriceCents: 12900,               // full price, in cents
+    category: 'FOOD',
+    allergens: ['GLUTEN', 'MILK'],
+  },
+  quantity: 5,               // absolute count left — not a delta
+  discountPercentage: 50,    // min 50; or overridePriceCents
+  date: '2026-07-16',        // sell window: midnight → close
+})
+
+console.log(surplusEntry.id, item.created)</pre>
+        </div>
+        <div class="codeblock">
+          <div class="cb-head"><span class="cb-title">push-surplus.sh · curl</span><button class="copy" data-copy="curl">copy</button></div>
+          <pre id="code-curl">curl -X POST \
+  "https://common-api.karma.life/api/v1/locations/1234/helpers/surplus/add" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item": {
+      "externalId": "sku-pasta-bolognese",
+      "title": "Pasta Bolognese",
+      "basePriceCents": 12900,
+      "category": "FOOD",
+      "allergens": ["GLUTEN", "MILK"]
+    },
+    "quantity": 5,
+    "discountPercentage": 50,
+    "date": "2026-07-16"
+  }'
+# → 201 Created (first push today) / 200 OK (quantity replaced)</pre>
+        </div>
+      </div>
+      <div class="callout amber">
+        <b>externalId is the join key.</b> Keep it stable (SKU / PLU / barcode) — never a name or timestamp. Change it and you create a duplicate item.
+      </div>
+    </div>
+
+    <!-- HOOKS -->
+    <div class="tabpanel" data-panel="hooks">
+      <p class="sec-sub" style="margin-bottom:14px">These are the <b>real events the platform emits</b>. Register once, then Karma POSTs them to your URL. The three a surplus POS lives on are at the top.</p>
+      <table>
+        <thead><tr><th>Event</th><th>Resource</th><th>Fires when</th><th>Use it to…</th></tr></thead>
+        <tbody>
+          <tr><td class="evt">surplus.added</td><td><code>surplus</code></td><td>A surplus entry is created (e.g. your push).</td><td>Confirm the listing is live. Payload: <code>{ locationId, locationName, entryId, addedAt }</code>.</td></tr>
+          <tr><td class="evt">order.created</td><td><code>order</code></td><td>A guest's order (incl. a surplus pickup) is sent.</td><td><b>Fire a prep ticket &amp; earmark stock.</b> Items carry Karma's <code>itemId</code> — map to your SKU via the push response.</td></tr>
+          <tr><td class="evt">tab.payment_completed</td><td><code>tab</code></td><td>Payment settles successfully.</td><td><b>Record the sale &amp; decrement POS stock.</b> Payload: <code>amountCents, paymentMethod, pspReference, itemIds…</code></td></tr>
+          <tr><td class="evt">order.completed</td><td><code>order</code></td><td>Order marked complete / picked up.</td><td>Close the loop in your POS.</td></tr>
+          <tr><td class="evt">order.cancelled</td><td><code>order</code></td><td>An order is cancelled.</td><td>Release earmarked stock.</td></tr>
+          <tr><td class="evt">tab.payment_failed</td><td><code>tab</code></td><td>A payment attempt fails.</td><td>Don't count the sale; keep stock available.</td></tr>
+          <tr><td class="evt">inventory.created / updated / deleted</td><td><code>inventory</code></td><td>An item is created, edited, or removed.</td><td>Mirror catalogue changes on your side.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout amber" style="margin-top:16px">
+        <b>Mapping note:</b> <code>order.created</code> items reference Karma's internal <code>itemId</code>, not your <code>externalId</code>. Keep the <code>itemId</code> ↔ <code>externalId</code> pair from each <code>surplus/add</code> response so you can resolve sales back to your own SKUs.
+      </div>
+
+      <div class="grid2" style="margin-top:20px">
+        <div class="codeblock">
+          <div class="cb-head"><span class="cb-title">subscribe.sh · register your endpoint</span><button class="copy" data-copy="sub">copy</button></div>
+          <pre id="code-sub">curl -X POST \
+  "https://common-api.karma.life/api/v1/webhooks/subscriptions" \
+  -H "X-API-Key: karma_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-pos.example.com/webhooks/karma",
+    "events": ["surplus.added", "order.created", "tab.payment_completed"],
+    "secret": "whsec_your_signing_secret_min16",
+    "active": true
+  }'</pre>
+        </div>
+        <div class="codeblock">
+          <div class="cb-head"><span class="cb-title">receiver.ts · verify &amp; handle</span><button class="copy" data-copy="recv">copy</button></div>
+          <pre id="code-recv">import express from 'express'
+import crypto from 'crypto'
+
+const app = express()
+app.use('/webhooks/karma', express.raw({ type: 'application/json' }))
+
+app.post('/webhooks/karma', (req, res) => {
+  const sig = req.headers['x-webhook-signature']
+  const expected = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET!)
+    .update(req.body).digest('hex')
+  if (sig !== expected) return res.status(401).send('bad signature')
+
+  res.status(200).send('OK')            // ack fast (&lt; 5s)
+
+  const evt = JSON.parse(req.body.toString())
+  switch (evt.event) {
+    case 'surplus.added':          // listing is live on Karma
+      pos.markListedOnKarma(evt.data.entryId); break
+    case 'order.created':          // guest ordered — items use Karma itemId
+      evt.data.items.forEach(li =&gt;
+        pos.earmark(skuFor(li.itemId), li.quantity)); break
+    case 'tab.payment_completed':  // money settled — book the sale
+      pos.recordSale(evt.data.itemIds, evt.data.amountCents,
+                     evt.data.pspReference); break
+    case 'order.cancelled':
+      pos.releaseEarmark(evt.resourceId); break
+  }
+})
+
+// skuFor() reads the itemId → externalId map you saved at push time.</pre>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="codeblock">
+          <div class="cb-head"><span class="cb-title">order.created · example payload</span></div>
+          <pre>{
+  "id": "evt_000004",
+  "event": "order.created",
+  "resource": "order",
+  "resourceId": "kd_4021",
+  "timestamp": "2026-07-16T18:35:00.000Z",
+  "apiVersion": "v1",
+  "data": {
+    "kitchenDispatchId": "kd_4021",
+    "dailyOrderNumber": 1,
+    "tabId": "tab_9310",
+    "locationId": 1234,
+    "state": "sent",
+    "orderChannel": "ONLINE",
+    "orderType": "pickup",
+    "totalAmountCents": 6450,
+    "itemCount": 1,
+    "items": [
+      { "kitchenDispatchItemId": "kdi_4022",
+        "itemId": 56789, "quantity": 1, "status": "sent" }
+    ],
+    "createdAt": "2026-07-16T18:35:00.000Z"
+  }
+}</pre>
+        </div>
+        <div class="codeblock">
+          <div class="cb-head"><span class="cb-title">tab.payment_completed · example payload</span></div>
+          <pre>{
+  "id": "evt_000005",
+  "event": "tab.payment_completed",
+  "resource": "tab",
+  "resourceId": "tab_9310",
+  "timestamp": "2026-07-16T18:35:04.000Z",
+  "apiVersion": "v1",
+  "data": {
+    "tabId": "tab_9310",
+    "tabSettlementId": "set_9311",
+    "purchaseIntentId": "pi_70155",
+    "paymentMethod": "card",
+    "paymentMode": "prepaid",
+    "amountCents": 6450,
+    "pspReference": "adyen_8H3K2",
+    "itemIds": [56789],
+    "locationId": 1234,
+    "completedAt": "2026-07-16T18:35:04.000Z"
+  }
+}</pre>
+        </div>
+      </div>
+      <div class="callout">Retry-safe: webhooks retry on non-200 (5 attempts, exponential backoff). Dedupe on <code>event.id</code> and treat handlers as idempotent. Delivery rides Google Cloud Pub/Sub → a delivery Cloud Function, so order isn't guaranteed — don't assume <code>tab.payment_completed</code> arrives after <code>order.created</code>.</div>
+    </div>
+
+    <!-- AUTH -->
+    <div class="tabpanel" data-panel="auth">
+      <div class="grid2">
+        <div>
+          <h3 style="font-size:16px;margin:0 0 8px">Authentication</h3>
+          <p style="font-size:14px;color:#40454d;margin:0 0 12px">
+            Every request is authenticated with an API key in the <code class="inl">X-API-Key</code> header —
+            no OAuth dance. Keys are scoped to specific locations and permissions.
+          </p>
+          <table>
+            <tbody>
+              <tr><th>Header</th><td><code>X-API-Key: karma_live_…</code></td></tr>
+              <tr><th>Scope</th><td>Per location ID — one key can cover many locations</td></tr>
+              <tr><th>Location ID</th><td>Path param <code>:locationId</code>; Merchant dashboard → Settings → Integrations</td></tr>
+            </tbody>
+          </table>
+          <h3 style="font-size:16px;margin:18px 0 8px">Permissions this key needs</h3>
+          <p style="font-size:13.5px;color:#40454d;margin:0 0 10px">Dot notation, <code class="inl">resource.action</code>. The whole demo runs on the three at the top.</p>
+          <table>
+            <thead><tr><th>Permission</th><th>For</th></tr></thead>
+            <tbody>
+              <tr><td><code>surplus.create</code></td><td>Push surplus — <b>also covers find-or-create of the item</b>, no separate inventory grant needed</td></tr>
+              <tr><td><code>surplus.read</code></td><td>List what you pushed</td></tr>
+              <tr><td><code>webhooks.create</code></td><td>Register your endpoint (+ <code>webhooks.read/update/delete</code> to manage it)</td></tr>
+              <tr><td><code>surplus.update</code> / <code>surplus.delete</code></td><td>Adjust quantity or pull an entry</td></tr>
+              <tr><td style="color:var(--muted)">— none —</td><td><b>Receiving</b> <code>order.created</code> / <code>tab.payment_completed</code>: no scope; auth is the HMAC signature</td></tr>
+            </tbody>
+          </table>
+          <div class="callout amber" style="margin-top:14px">
+            You do <b>not</b> need <code>orders.create</code> — guests create orders, your POS only receives them. Add it only if the POS <em>pushes its own orders into</em> Karma. Add <code>orders.read</code>/<code>purchases.read</code> only if you'd rather REST-poll than trust webhooks.
+          </div>
+        </div>
+        <div>
+          <h3 style="font-size:16px;margin:0 0 8px">Environments &amp; formats</h3>
+          <table>
+            <tbody>
+              <tr><th>Base URL</th><td><code>https://common-api.karma.life</code></td></tr>
+              <tr><th>Money</th><td>Integer minor units (cents / öre). <code>12900</code> = 129.00 SEK</td></tr>
+              <tr><th>Discount</th><td><code>discountPercentage</code> 50–90, <em>or</em> fixed <code>overridePriceCents</code></td></tr>
+              <tr><th>Sell window</th><td><code>date</code> (midnight→close) <em>or</em> <code>validFrom</code>/<code>validUntil</code></td></tr>
+              <tr><th>SDK</th><td><code>npm i @karmalicious/karma-api-js</code></td></tr>
+              <tr><th>Docs</th><td><a href="https://docs.karma.life">docs.karma.life</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="callout amber" style="margin-top:20px">
+        <b>Errors are typed.</b> <code>400</code> bad body · <code>401</code> missing/invalid key · <code>403</code> key lacks <code>surplus.create</code> for this location · <code>404</code> item/location not found · <code>500</code> retry with backoff.
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Interactive reference for Karma's Common API surplus + webhook integration ·
+    Contract mirrors <a href="https://docs.karma.life">docs.karma.life</a> · Questions →
+    <a href="mailto:hello@karma.life">hello@karma.life</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const BASE = "https://common-api.karma.life";
+  const LOCATION_ID = 1234;
+  const CLOSE_ISO = "2026-07-16T21:00:00.000Z";
+
+  // ---- seed inventory (the merchant's own POS stock) ----
+  const SEED = [
+    { sku:"sku-pasta-bolognese", name:"Pasta Bolognese",  emoji:"🍝", basePriceCents:12900, category:"FOOD",   allergens:["GLUTEN","MILK"], stock:5, discountPercentage:50, desc:"Slow-cooked, with tagliatelle" },
+    { sku:"sku-sourdough",       name:"Sourdough Loaf",    emoji:"🍞", basePriceCents:4900,  category:"BAKERY", allergens:["GLUTEN"],        stock:8, discountPercentage:60, desc:"Baked this morning" },
+    { sku:"sku-caesar-salad",    name:"Caesar Salad",      emoji:"🥗", basePriceCents:9900,  category:"FOOD",   allergens:["MILK","FISH"],   stock:3, discountPercentage:50, desc:"Crisp romaine, anchovy dressing" },
+    { sku:"sku-cinnamon-bun",    name:"Cinnamon Bun",      emoji:"🥐", basePriceCents:3500,  category:"BAKERY", allergens:["GLUTEN","MILK","EGG"], stock:6, discountPercentage:70, desc:"Cardamom-spiced" },
+  ];
+
+  let state, nextSurplusId, nextEvtId, nextKd, nextTab, nextIntent, busy;
+
+  const $  = (s, r=document) => r.querySelector(s);
+  const el = (tag, cls) => { const n=document.createElement(tag); if(cls) n.className=cls; return n; };
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const wait = (ms) => new Promise(r => setTimeout(r, reduce ? Math.min(ms,60) : ms));
+
+  const inventoryEl = $("#inventory");
+  const feedEl = $("#feed");
+  const streamEl = $("#stream");
+
+  const priceOf = (it) => it.overridePriceCents != null
+    ? it.overridePriceCents
+    : Math.round(it.basePriceCents * (1 - it.discountPercentage/100));
+  const sek = (c) => (c/100).toLocaleString("sv-SE",{minimumFractionDigits:2}) + " kr";
+
+  // ---- JSON syntax highlight for the console ----
+  function hl(obj) {
+    const json = JSON.stringify(obj, null, 2);
+    return json
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"([^"]+)":/g, '<span class="k">"$1"</span>:')
+      .replace(/: "([^"]*)"/g, ': <span class="s">"$1"</span>')
+      .replace(/: (-?\d+\.?\d*)/g, ': <span class="n">$1</span>')
+      .replace(/: (true|false|null)/g, ': <span class="b">$1</span>');
+  }
+
+  function init() {
+    state = SEED.map((s,i) => ({ ...s, pushed:false, surplusId:null, itemId:56789+i, karmaLeft:0, soldViaKarma:0 }));
+    nextSurplusId = 88421; nextEvtId = 1; nextKd = 4021; nextTab = 9310; nextIntent = 70155; busy = false;
+    renderInventory(); renderFeed(); clearStream();
+  }
+
+  // ================= RENDER: POS =================
+  function renderInventory() {
+    inventoryEl.innerHTML = "";
+    state.forEach((it, i) => {
+      const row = el("div", "inv-row" + (it.pushed ? " pushed":"") + (it.stock<=0 ? " sold":""));
+      const em = el("div","emoji"); em.textContent = it.emoji;
+
+      const mid = el("div");
+      const nm = el("div","nm"); nm.textContent = it.name;
+      const meta = el("div","meta"); meta.textContent = it.sku;
+      const pill = el("div"); pill.innerHTML =
+        `<span class="stockpill">${it.stock} in stock</span>` +
+        (it.soldViaKarma>0 ? ` <span class="sold-flag">−${it.soldViaKarma} sold on Karma</span>` : "");
+      mid.append(nm, meta, pill);
+
+      const act = el("div","row-actions");
+      if (!it.pushed) {
+        const b = el("button","mini"); b.textContent = "Push to Karma";
+        b.disabled = it.stock<=0;
+        b.onclick = () => pushSurplus(i);
+        act.append(b);
+      } else {
+        const f = el("div","pushed-flag"); f.textContent = `✓ live · ${it.karmaLeft} on Karma`;
+        act.append(f);
+      }
+      row.append(em, mid, act);
+      inventoryEl.append(row);
+    });
+  }
+
+  // ================= RENDER: KARMA APP =================
+  function renderFeed() {
+    const live = state.filter(it => it.pushed);
+    feedEl.innerHTML = "";
+    if (live.length === 0) {
+      const e = el("div","feed-empty");
+      e.innerHTML = "Nothing here yet.<br />Surplus you push appears instantly for nearby guests.";
+      feedEl.append(e);
+      return;
+    }
+    live.forEach(it => {
+      const idx = state.indexOf(it);
+      const card = el("div","listing");
+      const now = priceOf(it);
+      const off = Math.round((1 - now/it.basePriceCents) * 100);
+      card.innerHTML =
+        `<div class="li-emoji">${it.emoji}</div>
+         <div class="li-body">
+           <div class="li-nm">${it.name}</div>
+           <div class="li-desc">${it.desc}</div>
+           <div class="price">
+             <span class="now">${sek(now)}</span>
+             <span class="was">${sek(it.basePriceCents)}</span>
+             <span class="off">−${off}%</span>
+           </div>
+           <div class="li-foot"></div>
+         </div>`;
+      const foot = card.querySelector(".li-foot");
+      if (it.karmaLeft > 0) {
+        const left = el("span","leftpill"); left.textContent = `${it.karmaLeft} left`;
+        const buy = el("button","buy"); buy.textContent = "Buy";
+        buy.onclick = () => buyOnKarma(idx);
+        foot.append(left, buy);
+      } else {
+        const so = el("span","soldout"); so.textContent = "Sold out";
+        foot.append(so);
+      }
+      feedEl.append(card);
+    });
+  }
+
+  // ================= CONSOLE =================
+  function clearStream() {
+    streamEl.innerHTML =
+      `<div class="empty" id="streamEmpty">Waiting for traffic…<br />
+        <span style="color:#3f8f6a">POST</span> requests go out when you push surplus.<br />
+        <span style="color:#3f8f6a">WEBHOOK</span> events come back when a guest buys.</div>`;
+  }
+  function dropEmpty() { const e = $("#streamEmpty"); if (e) e.remove(); }
+
+  function logRequest({ verb, path, dir, body }) {
+    dropEmpty();
+    const card = el("div","card req");
+    card.innerHTML =
+      `<div class="card-head">
+         <span class="verb ${verb.toLowerCase()}">${verb}</span>
+         <span class="path">${path}</span>
+         <span class="dir">${dir}</span>
+       </div>
+       <pre class="body"><span class="hdr">X-API-Key: karma_live_•••••
+Content-Type: application/json</span>
+
+${hl(body)}</pre>`;
+    streamEl.append(card); scroll();
+    return card;
+  }
+  function logResponse({ status, statusClass, body }) {
+    dropEmpty();
+    const card = el("div","card res");
+    card.innerHTML =
+      `<div class="card-head">
+         <span class="status ${statusClass}">↳ ${status}</span>
+         <span class="dir">Karma → your POS</span>
+       </div>
+       <pre class="body">${hl(body)}</pre>`;
+    streamEl.append(card); scroll();
+  }
+  function logWebhook({ event, body }) {
+    dropEmpty();
+    const card = el("div","card hook");
+    card.innerHTML =
+      `<div class="card-head">
+         <span class="verb hook">WEBHOOK</span>
+         <span class="path">POST /webhooks/karma · ${event}</span>
+         <span class="dir">Karma → your POS</span>
+       </div>
+       <pre class="body"><span class="hdr">X-Webhook-Signature: sha256=a3f9•••</span>
+
+${hl(body)}</pre>`;
+    streamEl.append(card); scroll();
+  }
+  function scroll() { streamEl.scrollTop = streamEl.scrollHeight; }
+
+  // ================= ACTIONS =================
+  async function pushSurplus(i) {
+    if (busy) return;
+    const it = state[i];
+    if (it.pushed || it.stock <= 0) return;
+
+    logRequest({
+      verb: "POST",
+      path: `/api/v1/locations/${LOCATION_ID}/helpers/surplus/add`,
+      dir: "your POS → Karma",
+      body: {
+        item: {
+          externalId: it.sku, title: it.name,
+          basePriceCents: it.basePriceCents,
+          category: it.category, allergens: it.allergens,
+        },
+        quantity: it.stock,
+        discountPercentage: it.discountPercentage,
+        date: "2026-07-16",
+      },
+    });
+
+    await wait(560);
+
+    const surplusId = nextSurplusId++;
+    it.pushed = true; it.surplusId = surplusId; it.karmaLeft = it.stock;
+
+    logResponse({
+      status: "201 Created", statusClass: "created",
+      body: {
+        status: "success",
+        data: {
+          surplusEntry: {
+            id: surplusId, itemId: it.itemId, locationId: LOCATION_ID,
+            ministock: it.stock,
+            validFrom: "2026-07-16T00:00:00.000Z", validUntil: CLOSE_ISO,
+            discountPercentage: it.discountPercentage,
+            overridePriceCents: null,
+            computedPriceCents: priceOf(it),
+          },
+          // Keep this pair: order.created later references itemId, not your externalId.
+          item: { id: it.itemId, externalId: it.sku, created: true },
+        },
+      },
+    });
+
+    renderInventory(); renderFeed();
+
+    // Karma also emits a webhook confirming the listing went live.
+    await wait(reduce ? 60 : 460);
+    logWebhook({
+      event: "surplus.added",
+      body: {
+        id: `evt_${String(nextEvtId++).padStart(6,"0")}`,
+        event: "surplus.added",
+        resource: "surplus", resourceId: String(surplusId),
+        timestamp: "2026-07-16T18:00:00.000Z", apiVersion: "v1",
+        data: {
+          locationId: LOCATION_ID, locationName: "Nonna's Kitchen",
+          entryId: surplusId, addedAt: "2026-07-16T18:00:00.000Z",
+        },
+      },
+    });
+  }
+
+  async function buyOnKarma(i) {
+    if (busy) return;
+    const it = state[i];
+    if (!it.pushed || it.karmaLeft <= 0) return;
+
+    // guest buys 1 unit
+    it.karmaLeft -= 1;
+    it.stock = Math.max(0, it.stock - 1);
+    it.soldViaKarma += 1;
+    const now = priceOf(it);
+    const kdId  = `kd_${nextKd++}`;
+    const tabId = `tab_${nextTab++}`;
+    const kdiId = `kdi_${nextKd}`;
+
+    // 1) order.created — the guest's pickup order lands. Note: items carry
+    //    Karma's internal itemId (not your externalId) — map via the push response.
+    logWebhook({
+      event: "order.created",
+      body: {
+        id: `evt_${String(nextEvtId++).padStart(6,"0")}`,
+        event: "order.created",
+        resource: "order", resourceId: kdId,
+        timestamp: "2026-07-16T18:35:00.000Z", apiVersion: "v1",
+        data: {
+          kitchenDispatchId: kdId, dailyOrderNumber: it.soldViaKarma,
+          tabId, locationId: LOCATION_ID, state: "sent",
+          orderChannel: "ONLINE", orderType: "pickup", orderFlow: "prepaid",
+          totalAmountCents: now, itemCount: 1,
+          items: [{ kitchenDispatchItemId: kdiId, itemId: it.itemId, quantity: 1, status: "sent" }],
+          createdAt: "2026-07-16T18:35:00.000Z",
+        },
+      },
+    });
+
+    await wait(reduce ? 60 : 560);
+
+    // 2) tab.payment_completed — money settled. Record the sale in your POS.
+    logWebhook({
+      event: "tab.payment_completed",
+      body: {
+        id: `evt_${String(nextEvtId++).padStart(6,"0")}`,
+        event: "tab.payment_completed",
+        resource: "tab", resourceId: tabId,
+        timestamp: "2026-07-16T18:35:04.000Z", apiVersion: "v1",
+        data: {
+          tabId, tabSettlementId: `set_${nextTab}`,
+          purchaseIntentId: `pi_${nextIntent++}`,
+          paymentMethod: "card", paymentMode: "prepaid",
+          amountCents: now, pspReference: "adyen_8H3K2",
+          itemIds: [it.itemId], locationId: LOCATION_ID,
+          completedAt: "2026-07-16T18:35:04.000Z",
+        },
+      },
+    });
+
+    renderInventory(); renderFeed();
+  }
+
+  // ================= AUTOPLAY =================
+  async function runFlow() {
+    if (busy) return;
+    busy = true;
+    const play = $("#playBtn");
+    play.disabled = true; play.textContent = "Running…";
+    init(); busy = true; // re-lock after init reset
+    play.disabled = true; play.textContent = "Running…";
+
+    await wait(300);
+    // push three items
+    for (const idx of [0,1,3]) {
+      busy = false; await pushSurplus(idx); busy = true;
+      await wait(520);
+    }
+    await wait(500);
+    // guest buys: pasta once, cinnamon buns until sold out
+    busy = false; await buyOnKarma(0); busy = true; await wait(650);
+    // sell out the cinnamon buns (index 3) — buy karmaLeft times
+    let guard = 0;
+    while (state[3].karmaLeft > 0 && guard++ < 12) {
+      busy = false; await buyOnKarma(3); busy = true; await wait(430);
+    }
+
+    busy = false;
+    play.disabled = false; play.textContent = "▶  Run the full flow";
+  }
+
+  // ================= WIRING =================
+  $("#playBtn").onclick = runFlow;
+  $("#resetBtn").onclick = () => { if (!busy) init(); };
+  $("#clearBtn").onclick = () => { if (!busy) clearStream(); };
+
+  // tabs
+  $("#tabs").addEventListener("click", (e) => {
+    const t = e.target.closest(".tab"); if (!t) return;
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x===t));
+    const key = t.dataset.tab;
+    document.querySelectorAll(".tabpanel").forEach(p =>
+      p.classList.toggle("active", p.dataset.panel===key));
+  });
+
+  // copy buttons
+  document.querySelectorAll(".copy").forEach(btn => {
+    btn.onclick = () => {
+      const src = $("#code-" + btn.dataset.copy);
+      if (!src) return;
+      const txt = src.textContent;
+      navigator.clipboard?.writeText(txt).then(() => {
+        const old = btn.textContent; btn.textContent = "copied ✓";
+        setTimeout(() => btn.textContent = old, 1400);
+      });
+    };
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
