@@ -19,6 +19,8 @@ This repository hosts the OpenAPI specification and documentation for the [Karma
 |---------|-------------|
 | [Nightly Sales Data](examples/nightly-sales-data.md) | Fetch and aggregate daily sales for accounting |
 | [Inventory Sync](examples/inventory-sync.md) | Two-way inventory sync with POS systems |
+| [Item Metadata](pages/examples/item-metadata.mdx) | Store and query external product identifiers without custom fields |
+| [Location Metadata](pages/examples/location-metadata.mdx) | Store and query external location identifiers without custom fields |
 | [Real-time Webhooks](examples/realtime-webhooks.md) | Receive instant sales notifications |
 
 ## Custom Integrations

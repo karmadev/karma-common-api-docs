@@ -1,0 +1,85 @@
+---
+title: Store External Item IDs
+description: Attach your own SKU, PLU, article, or integration identifiers to Karma inventory items without requesting custom schema fields.
+---
+
+Item metadata is a JSON object for identifiers and context owned by your integration. Use it to map a Karma item ID to a SKU, PLU, article number, or another identifier from your system.
+
+Metadata keys are stored as supplied, returned by inventory reads, and replicated with the item into Karma's analytics pipeline. They remain scoped to items your API key can access.
+
+## Store metadata when creating an item
+
+Include `metadata` in `POST /api/v1/inventory`:
+
+```json
+{
+  "locationId": 123,
+  "title": "Cappuccino",
+  "basePrice": 4500,
+  "itemType": "beverage",
+  "metadata": {
+    "externalItemId": "sku-se-3732185",
+    "externalCountryCode": "SE"
+  }
+}
+```
+
+The created item returns the stored metadata object. Items without metadata return an empty object.
+
+## Add or update metadata later
+
+Use the dedicated merge endpoint when the item already exists:
+
+```bash
+curl -X PATCH "https://common-api.karma.life/api/v1/inventory/456/metadata" \
+  -H "X-API-Key: karma_live_your_api_key_here" \
+  -H "X-Location-Id: 123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metadata": {
+      "externalItemId": "sku-se-3732185",
+      "externalCountryCode": "SE"
+    }
+  }'
+```
+
+This performs a shallow merge. Keys included in the request are added or replaced; other existing top-level keys are preserved.
+
+Sending `metadata` through `PUT /api/v1/inventory/:id` replaces the entire metadata object. Prefer the PATCH endpoint when you only own some of the keys.
+
+## Read and search
+
+Inventory list and single-item responses include `metadata`.
+
+To find an item by one string identifier, use a dotted metadata filter:
+
+```
+GET /api/v1/inventory?locationId=123&metadata.externalItemId=sku-se-3732185
+```
+
+For multiple keys or non-string values, send a JSON-encoded object in the `metadata` query parameter. Metadata filters use containment, so every supplied key and value must match.
+
+## Join through BigQuery
+
+Customer-filtered BigQuery datasets expose the generic metadata object on the `items` view. Join a sale line to an external item identifier through the Karma item ID:
+
+```sql
+SELECT
+  pli.id AS purchase_line_item_id,
+  i.id AS item_id,
+  JSON_VALUE(i.metadata, '$.externalItemId') AS external_item_id
+FROM `your_customer_dataset.purchase_line_items` AS pli
+JOIN `your_customer_dataset.items` AS i
+  ON pli.origin_item_id = i.id
+```
+
+`JSON_VALUE` returns a SQL string for scalar JSON values. Store identifiers as JSON strings when leading zeroes or formatting must be preserved.
+
+## Key and data rules
+
+- Prefix keys with your company or integration name when a generic name could collide.
+- Keep identifiers as strings when leading zeroes or formatting matter.
+- Do not store passwords, API keys, access tokens, payment data, or other secrets.
+- Metadata is for mapping and context, not for high-volume event data.
+
+See [location metadata](./location-metadata) to apply the same pattern to shops, venues, or other Karma locations.

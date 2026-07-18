@@ -2,6 +2,20 @@
   "_note": "Source of truth for the API changelog. pages/changelog.mdx is GENERATED from this file by scripts/generate-changelog.mjs — edit this file (or run the generator), not the MDX. Newest entry first.",
   "entries": [
     {
+      "date": "2026-07-18",
+      "summary": "Documented generic metadata for external item and location identifiers across the Common API and customer BigQuery views.",
+      "changes": [
+        {
+          "type": "changed",
+          "text": "Inventory item and location API references now describe generic metadata on create, update, and read operations."
+        },
+        {
+          "type": "added",
+          "text": "Item and location metadata guides cover shallow merging, metadata filtering, and customer BigQuery join patterns."
+        }
+      ]
+    },
+    {
       "date": "2026-06-28",
       "version": "v20260131-1317-1",
       "commit": "0e469b4",

@@ -1,0 +1,81 @@
+---
+title: Store External Location IDs
+description: Attach your own shop, venue, or integration identifiers to Karma locations without requesting custom schema fields.
+---
+
+Location metadata is a JSON object for identifiers and context owned by your integration. Use it when your system needs to map a Karma `locationId` to its own shop or venue ID.
+
+Metadata keys are stored as supplied, returned by location reads, and replicated with the location into Karma's analytics pipeline. They remain scoped to locations your API key can access.
+
+## Store metadata when creating a location
+
+Include `metadata` in `POST /api/v1/locations`:
+
+```json
+{
+  "name": "Central Station",
+  "address": "Example street 1",
+  "city": "Stockholm",
+  "country": "SE",
+  "psp": "STRIPE",
+  "metadata": {
+    "externalShopId": "shop-se-133",
+    "externalCountryCode": "SE"
+  }
+}
+```
+
+## Add or update metadata later
+
+Use the dedicated merge endpoint when the location already exists:
+
+```bash
+curl -X PATCH "https://common-api.karma.life/api/v1/locations/123/metadata" \
+  -H "X-API-Key: karma_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metadata": {
+      "externalShopId": "shop-se-133",
+      "externalCountryCode": "SE"
+    }
+  }'
+```
+
+This performs a shallow merge. Keys included in the request are added or replaced; other existing metadata keys are preserved.
+
+## Read and search
+
+`GET /api/v1/locations/:locationId` returns the metadata object on the location.
+
+To find a location by one of your identifiers, use a metadata filter:
+
+```
+GET /api/v1/locations?metadata.externalShopId=shop-se-133
+```
+
+For multiple keys or non-string values, send a JSON-encoded object in the `metadata` query parameter.
+
+## Join through BigQuery
+
+Customer-filtered BigQuery datasets expose a `locations` view keyed by `location_id`. Join any location-scoped table to your external shop or venue identifier through that view:
+
+```sql
+SELECT
+  p.id AS purchase_id,
+  l.location_id,
+  JSON_VALUE(l.metadata, '$.externalShopId') AS external_shop_id
+FROM `your_customer_dataset.purchases` AS p
+JOIN `your_customer_dataset.locations` AS l
+  ON p.location_id = l.location_id
+```
+
+The view exposes integration-owned metadata, together with standard location name and country fields. It does not expose Karma's internal adapter configuration.
+
+## Key and data rules
+
+- Prefix keys with your company or integration name when a generic name could collide.
+- Keep identifiers as strings when leading zeroes or formatting matter.
+- Do not store passwords, API keys, access tokens, payment data, or other secrets.
+- Metadata is for mapping and context, not for high-volume event data.
+
+See [item metadata](./item-metadata) to apply the same pattern to SKUs, PLUs, article numbers, or other product identifiers.

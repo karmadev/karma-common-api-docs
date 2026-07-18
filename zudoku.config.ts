@@ -146,6 +146,8 @@ const config: ZudokuConfig = {
         "examples/nightly-sales-data",
         "examples/sales-data-model",
         "examples/inventory-sync",
+        "examples/item-metadata",
+        "examples/location-metadata",
         "examples/push-surplus-from-pos",
         "examples/realtime-webhooks",
       ],

@@ -17,7 +17,14 @@ Inventory sync is essential for:
 | GET | `/api/v1/inventory` | List all inventory items |
 | GET | `/api/v1/inventory/:id` | Get single item details |
 | PUT | `/api/v1/inventory/:id` | Update an inventory item |
+| PATCH | `/api/v1/inventory/:id/metadata` | Merge external identifiers or integration context |
 | POST | `/api/v1/inventory/commit` | Commit items to an order |
+
+## Mapping external item IDs
+
+Store your SKU, PLU, article number, or other product identifier in the generic `metadata` object. Inventory reads return this object, and the inventory list can filter by its keys.
+
+Use the dedicated metadata PATCH endpoint for a shallow merge so keys owned by another integration are preserved. See [Store External Item IDs](./item-metadata) for create, update, filter, and BigQuery examples.
 
 ## Pulling Inventory (Fetch from Karma)
 
@@ -32,6 +39,7 @@ interface InventoryItem {
   available: boolean
   categoryId: number
   categoryName: string
+  metadata: Record<string, unknown>
   variants: VariantGroup[]
 }
 
@@ -72,6 +80,7 @@ async function pullInventory(
       available: item.available,
       categoryId: item.categoryId,
       categoryName: item.categoryName,
+      metadata: item.metadata,
       variants: item.variantGroups || []
     }))
 
