@@ -181302,7 +181302,7 @@ paths:
       tags:
         - Time Slots
       description: >
-
+        
         Generates available time slots for pickup/ordering at a location on a
         specific date.
 
