@@ -132796,6 +132796,19 @@ paths:
             progressively more expensive to compute. When provided, page/offset
             params are ignored and the total count is not computed
             (pagination.total is omitted).
+        - schema:
+            type: string
+            enum:
+              - cursor
+              - offset
+          in: query
+          name: paginate
+          required: false
+          description: "Pagination mode. 'cursor' opts into keyset pagination: the
+            expensive count query is skipped and pagination.hasMore/nextCursor
+            are returned even on the first page (before any cursor value
+            exists). Defaults to 'offset' (page/total) for backwards
+            compatibility."
       responses:
         "200":
           description: Purchases retrieved successfully
