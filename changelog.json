@@ -2,6 +2,16 @@
   "_note": "Source of truth for the API changelog. pages/changelog.mdx is GENERATED from this file by scripts/generate-changelog.mjs — edit this file (or run the generator), not the MDX. Newest entry first.",
   "entries": [
     {
+      "date": "2026-07-22",
+      "summary": "Documented incremental extraction from the items BigQuery view using the new updated_at timestamp.",
+      "changes": [
+        {
+          "type": "added",
+          "text": "The items view now exposes an updated_at timestamp so customer BigQuery pipelines can extract only changed items incrementally instead of reloading the full table."
+        }
+      ]
+    },
+    {
       "date": "2026-07-18",
       "summary": "Documented generic metadata for external item and location identifiers across the Common API and customer BigQuery views.",
       "changes": [
@@ -21,7 +31,10 @@
       "commit": "0e469b4",
       "summary": "Added a bulk surplus upload endpoint so POS integrations can push surplus inventory directly.",
       "changes": [
-        { "type": "added", "text": "Bulk surplus upload endpoint for pushing surplus from your own POS." }
+        {
+          "type": "added",
+          "text": "Bulk surplus upload endpoint for pushing surplus from your own POS."
+        }
       ]
     },
     {
@@ -30,7 +43,10 @@
       "commit": "d4ad57e",
       "summary": "Order line items now carry per-item VAT fields.",
       "changes": [
-        { "type": "added", "text": "Order line items expose per-item vatRateBasisPoints and vatAmountCents." }
+        {
+          "type": "added",
+          "text": "Order line items expose per-item vatRateBasisPoints and vatAmountCents."
+        }
       ]
     },
     {
@@ -39,7 +55,10 @@
       "commit": "b647cd6",
       "summary": "Purchase line items now expose per-line VAT.",
       "changes": [
-        { "type": "added", "text": "Per-line-item VAT (vatRateBasisPoints, vatAmountCents) on purchases." }
+        {
+          "type": "added",
+          "text": "Per-line-item VAT (vatRateBasisPoints, vatAmountCents) on purchases."
+        }
       ]
     },
     {
@@ -48,7 +67,10 @@
       "commit": "d570182",
       "summary": "Introduced the public Order endpoint for placing orders.",
       "changes": [
-        { "type": "added", "text": "Public Order endpoint (place an order), with a worked example." }
+        {
+          "type": "added",
+          "text": "Public Order endpoint (place an order), with a worked example."
+        }
       ]
     },
     {
@@ -57,7 +79,10 @@
       "commit": "60eb7d0",
       "summary": "First published version of the Karma Common API documentation.",
       "changes": [
-        { "type": "added", "text": "Initial public API reference, examples, and getting-started guide." }
+        {
+          "type": "added",
+          "text": "Initial public API reference, examples, and getting-started guide."
+        }
       ]
     }
   ]

@@ -75,6 +75,18 @@ JOIN `your_customer_dataset.items` AS i
 
 `JSON_VALUE` returns a SQL string for scalar JSON values. Store identifiers as JSON strings when leading zeroes or formatting must be preserved.
 
+### Incremental extraction
+
+The `items` view exposes an `updated_at` timestamp that advances on every change to an item (price, title, availability, metadata). Use it as a high-water mark to pull only what changed since your last sync instead of reloading the whole table:
+
+```sql
+SELECT *
+FROM `your_customer_dataset.items`
+WHERE updated_at > @last_synced_at
+```
+
+`updated_at` is maintained on write and is never null, so a watermark query is always safe. Existing rows carry a truthful historical value, so your first incremental pull after this column appears returns the full backfill once, then only deltas thereafter.
+
 ## Key and data rules
 
 - Prefix keys with your company or integration name when a generic name could collide.
