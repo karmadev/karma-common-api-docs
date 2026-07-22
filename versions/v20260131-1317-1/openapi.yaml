@@ -156622,6 +156622,457 @@ paths:
                         type: string
                       executionTimeMs:
                         type: number
+  /api/v1/locations/{locationId}/surplus/recurring:
+    get:
+      summary: List recurring surplus schedules for a location
+      tags:
+        - Surplus
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      schedules:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            locationId:
+                              type: integer
+                            itemId:
+                              type: integer
+                            ministock:
+                              type: integer
+                            discountPercentage:
+                              type:
+                                - "null"
+                                - integer
+                            overridePriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            note:
+                              type:
+                                - "null"
+                                - string
+                            weekdays:
+                              type: array
+                              items:
+                                type: integer
+                            publishTime:
+                              type: string
+                            timezone:
+                              type: string
+                            startDate:
+                              type: string
+                            endDate:
+                              type:
+                                - "null"
+                                - string
+                            paused:
+                              type: boolean
+                            itemName:
+                              type:
+                                - "null"
+                                - string
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: number
+    post:
+      summary: Create recurring surplus schedules (one per item)
+      tags:
+        - Surplus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedules:
+                  type: array
+                  maxItems: 50
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      itemId:
+                        type: integer
+                      ministock:
+                        type: integer
+                        minimum: 1
+                      discountPercentage:
+                        type:
+                          - integer
+                          - "null"
+                        minimum: 50
+                        maximum: 90
+                      overridePriceCents:
+                        type:
+                          - integer
+                          - "null"
+                        minimum: 0
+                      note:
+                        type:
+                          - string
+                          - "null"
+                        maxLength: 500
+                      weekdays:
+                        type: array
+                        items:
+                          type: integer
+                          minimum: 1
+                          maximum: 7
+                        minItems: 1
+                      publishTime:
+                        type: string
+                        pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+                      startDate:
+                        type: string
+                      endDate:
+                        type:
+                          - string
+                          - "null"
+                    required:
+                      - itemId
+                      - ministock
+                      - weekdays
+                      - publishTime
+              required:
+                - schedules
+        required: true
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      created:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            locationId:
+                              type: integer
+                            itemId:
+                              type: integer
+                            ministock:
+                              type: integer
+                            discountPercentage:
+                              type:
+                                - "null"
+                                - integer
+                            overridePriceCents:
+                              type:
+                                - "null"
+                                - integer
+                            note:
+                              type:
+                                - "null"
+                                - string
+                            weekdays:
+                              type: array
+                              items:
+                                type: integer
+                            publishTime:
+                              type: string
+                            timezone:
+                              type: string
+                            startDate:
+                              type: string
+                            endDate:
+                              type:
+                                - "null"
+                                - string
+                            paused:
+                              type: boolean
+                            itemName:
+                              type:
+                                - "null"
+                                - string
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            itemId:
+                              type: integer
+                            message:
+                              type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: number
+  /api/v1/locations/{locationId}/surplus/recurring/{id}:
+    put:
+      summary: Update a recurring surplus schedule
+      tags:
+        - Surplus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ministock:
+                  type: integer
+                  minimum: 1
+                discountPercentage:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 50
+                  maximum: 90
+                overridePriceCents:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 0
+                note:
+                  type:
+                    - string
+                    - "null"
+                  maxLength: 500
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 1
+                    maximum: 7
+                  minItems: 1
+                publishTime:
+                  type: string
+                  pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+                startDate:
+                  type: string
+                endDate:
+                  type:
+                    - string
+                    - "null"
+                paused:
+                  type: boolean
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+        - schema:
+            type: integer
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      schedule:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          locationId:
+                            type: integer
+                          itemId:
+                            type: integer
+                          ministock:
+                            type: integer
+                          discountPercentage:
+                            type:
+                              - "null"
+                              - integer
+                          overridePriceCents:
+                            type:
+                              - "null"
+                              - integer
+                          note:
+                            type:
+                              - "null"
+                              - string
+                          weekdays:
+                            type: array
+                            items:
+                              type: integer
+                          publishTime:
+                            type: string
+                          timezone:
+                            type: string
+                          startDate:
+                            type: string
+                          endDate:
+                            type:
+                              - "null"
+                              - string
+                          paused:
+                            type: boolean
+                          itemName:
+                            type:
+                              - "null"
+                              - string
+                          createdAt:
+                            type: string
+                          updatedAt:
+                            type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: number
+    delete:
+      summary: Delete a recurring surplus schedule
+      tags:
+        - Surplus
+      parameters:
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+        - schema:
+            type: integer
+          in: path
+          name: id
+          required: true
+      responses:
+        "204":
+          description: Default Response
+  /api/v1/locations/{locationId}/surplus/stats:
+    get:
+      summary: Surplus sales stats (GMV + units sold) for a location on a date
+      tags:
+        - Surplus
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: date
+          required: false
+        - schema:
+            type: integer
+          in: path
+          name: locationId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                      gmvCents:
+                        type: integer
+                      itemsSold:
+                        type: integer
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: number
+  /internal/v1/surplus/materialize-recurring:
+    post:
+      summary: "Internal: materialize recurring surplus into item_ministock (cron)"
+      tags:
+        - Surplus
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      schedulesProcessed:
+                        type: integer
+                      rowsCreated:
+                        type: integer
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: number
   /api/v1/table-groups:
     get:
       summary: List table groups
