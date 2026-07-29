@@ -38873,6 +38873,10 @@ paths:
                             isAvailable:
                               type: boolean
                               description: Whether item is available for ordering
+                            ean:
+                              type: string
+                              nullable: true
+                              description: EAN/barcode for scan lookups (e.g. surplus barcode scanning)
                             deleted:
                               type: boolean
                               description: Whether item is soft-deleted
@@ -39365,6 +39369,11 @@ paths:
                   items:
                     type: string
                   description: Visibility settings
+                ean:
+                  type: string
+                  nullable: true
+                  maxLength: 64
+                  description: EAN/barcode
                 metadata:
                   type: object
                   additionalProperties: true
@@ -39438,6 +39447,10 @@ paths:
                       isAvailable:
                         type: boolean
                         description: Whether item is available for ordering
+                      ean:
+                        type: string
+                        nullable: true
+                        description: EAN/barcode for scan lookups (e.g. surplus barcode scanning)
                       deleted:
                         type: boolean
                         description: Whether item is soft-deleted
@@ -39910,6 +39923,10 @@ paths:
                       isAvailable:
                         type: boolean
                         description: Whether item is available for ordering
+                      ean:
+                        type: string
+                        nullable: true
+                        description: EAN/barcode for scan lookups (e.g. surplus barcode scanning)
                       deleted:
                         type: boolean
                         description: Whether item is soft-deleted
@@ -40375,6 +40392,11 @@ paths:
                   nullable: true
                   description: Sort order within groups on printed kitchen tickets and KDS. Lower
                     numbers appear first. NULL = sort last alphabetically.
+                ean:
+                  type: string
+                  nullable: true
+                  maxLength: 64
+                  description: EAN/barcode
                 metadata:
                   type: object
                   additionalProperties: true
@@ -40448,6 +40470,10 @@ paths:
                       isAvailable:
                         type: boolean
                         description: Whether item is available for ordering
+                      ean:
+                        type: string
+                        nullable: true
+                        description: EAN/barcode for scan lookups (e.g. surplus barcode scanning)
                       deleted:
                         type: boolean
                         description: Whether item is soft-deleted
@@ -41679,6 +41705,10 @@ paths:
                       isAvailable:
                         type: boolean
                         description: Whether item is available for ordering
+                      ean:
+                        type: string
+                        nullable: true
+                        description: EAN/barcode for scan lookups (e.g. surplus barcode scanning)
                       deleted:
                         type: boolean
                         description: Whether item is soft-deleted
@@ -132856,7 +132886,10 @@ paths:
                               description: Payment provider (e.g., stripe, adyen)
                             status:
                               type: string
-                              description: Payment status (pending, completed, failed, etc.)
+                              description: Payment status. 'confirmed' = paid/complete (the only status to
+                                treat as a finalized sale); 'pending' =
+                                in-flight; 'canceled'/'failed' = not paid.
+                                Filter with the `status` query param.
                             createdAt:
                               type: string
                               format: date-time
@@ -132881,55 +132914,86 @@ paths:
                                     description: Line item ID
                                   type:
                                     type: string
-                                    description: Line item type ('product' or 'tip')
+                                    description: Line item type. 'product' = a sellable catalogue item; 'tip' = a
+                                      gratuity line (not a product); 'amount' =
+                                      an abstract amount paid toward a
+                                      split/partial tab (not a product). For a
+                                      product-sales export, keep only
+                                      type='product'.
                                   title:
                                     type: string
                                     description: Item title
                                   quantity:
                                     type: number
-                                    description: Quantity ordered (supports fractional quantities, e.g. weight-based
-                                      items)
+                                    description: Whole-unit quantity ordered. For fractional/weight-based items use
+                                      quantityCents (quantity is the
+                                      rounded/whole count).
                                   quantityCents:
                                     type: number
                                     nullable: true
-                                    description: Quantity in cents (100 = 1x), used for fractional quantities
+                                    description: Quantity x100 (100 = 1 unit). Supports fractional/weight-based
+                                      items; divide by 100 for the true
+                                      quantity.
                                   finalAmountCents:
                                     type: number
-                                    description: Final price per unit in cents, after discounts
+                                    description: Authoritative PER-UNIT price in cents, VAT-INCLUSIVE, AFTER
+                                      discount. Line total = finalAmountCents x
+                                      quantity (see totalAmountCents).
                                   totalAmountCents:
                                     type: number
                                     nullable: true
-                                    description: Total price for the line (per-unit price x quantity) in cents
+                                    description: Line total = finalAmountCents x quantity, VAT-inclusive, after
+                                      discount. May be null/0 on some legacy
+                                      purchases — if you need a guaranteed line
+                                      total, compute finalAmountCents x quantity
+                                      yourself.
                                   vatRateBasisPoints:
                                     type: number
                                     nullable: true
-                                    description: VAT rate for this article in basis points (1200 = 12%, 2500 = 25%).
-                                      null if VAT is not yet resolved for the
-                                      line.
+                                    description: VAT rate in basis points (1200 = 12%, 2500 = 25%); divide by 100
+                                      for the percentage. Prices are
+                                      VAT-inclusive. null if VAT is not yet
+                                      resolved for the line.
                                   vatAmountCents:
                                     type: number
                                     nullable: true
-                                    description: VAT amount per unit in cents
+                                    description: VAT amount PER UNIT in cents (the VAT portion already contained in
+                                      finalAmountCents).
                                   totalVatAmountCents:
                                     type: number
                                     nullable: true
-                                    description: Total VAT for the line (per-unit VAT x quantity) in cents
+                                    description: VAT for the whole line = vatAmountCents x quantity, in cents.
                                   appliedTotalDiscountAmountCents:
                                     type: number
                                     nullable: true
-                                    description: Total discount applied to this line in cents
+                                    description: Discount allocated to this line, in cents, stored separately as a
+                                      positive number. It is ALREADY subtracted
+                                      from finalAmountCents/totalAmountCents.
+                                      Gross before discount = totalAmountCents +
+                                      appliedTotalDiscountAmountCents.
                                   articleNo:
                                     type: string
                                     nullable: true
-                                    description: Article number / SKU
+                                    description: Karma-internal line reference used for fiscal cash-register
+                                      registration — NOT the merchant external
+                                      SKU/PLU/article number, despite the name.
+                                      To match a line to your product catalogue,
+                                      join on originItemId, not this field.
                                   originItemId:
                                     type: number
                                     nullable: true
-                                    description: ID of the originating inventory item
+                                    description: ID of the catalogue item this line was sold from. Use this to join
+                                      a sale line back to your product/inventory
+                                      (and thus to your own external article
+                                      number).
                                   parentLineItemId:
                                     type: number
                                     nullable: true
-                                    description: Parent line item ID for child/modifier rows
+                                    description: "Set on child rows: variant/add-on items promoted to their own line
+                                      point at their parent here. To avoid
+                                      double-counting a bundle, reconcile line
+                                      totals against the purchase amount rather
+                                      than summing parent and children blindly."
                                   kitchenDispatchItemId:
                                     type: string
                                     nullable: true
@@ -132940,7 +133004,15 @@ paths:
                                     items:
                                       type: object
                                       additionalProperties: true
-                                    description: Modifications/extras applied to this line item
+                                    description: Modifications/adjustments applied inline to this line, e.g. [{
+                                      title, priceAdjustmentCents, variantRef?
+                                      }]. Discounts and vouchers appear here as
+                                      negative priceAdjustmentCents. Product
+                                      variant add-ons that map to their own item
+                                      instead appear as separate child line
+                                      items (see parentLineItemId) — a
+                                      modification here does NOT carry an
+                                      article number.
                                   channel:
                                     type: string
                                     nullable: true
@@ -133378,7 +133450,10 @@ paths:
                             description: Payment provider (e.g., stripe, adyen)
                           status:
                             type: string
-                            description: Payment status (pending, completed, failed, etc.)
+                            description: Payment status. 'confirmed' = paid/complete (the only status to
+                              treat as a finalized sale); 'pending' = in-flight;
+                              'canceled'/'failed' = not paid. Filter with the
+                              `status` query param.
                           createdAt:
                             type: string
                             format: date-time
@@ -133403,55 +133478,84 @@ paths:
                                   description: Line item ID
                                 type:
                                   type: string
-                                  description: Line item type ('product' or 'tip')
+                                  description: Line item type. 'product' = a sellable catalogue item; 'tip' = a
+                                    gratuity line (not a product); 'amount' = an
+                                    abstract amount paid toward a split/partial
+                                    tab (not a product). For a product-sales
+                                    export, keep only type='product'.
                                 title:
                                   type: string
                                   description: Item title
                                 quantity:
                                   type: number
-                                  description: Quantity ordered (supports fractional quantities, e.g. weight-based
-                                    items)
+                                  description: Whole-unit quantity ordered. For fractional/weight-based items use
+                                    quantityCents (quantity is the rounded/whole
+                                    count).
                                 quantityCents:
                                   type: number
                                   nullable: true
-                                  description: Quantity in cents (100 = 1x), used for fractional quantities
+                                  description: Quantity x100 (100 = 1 unit). Supports fractional/weight-based
+                                    items; divide by 100 for the true quantity.
                                 finalAmountCents:
                                   type: number
-                                  description: Final price per unit in cents, after discounts
+                                  description: Authoritative PER-UNIT price in cents, VAT-INCLUSIVE, AFTER
+                                    discount. Line total = finalAmountCents x
+                                    quantity (see totalAmountCents).
                                 totalAmountCents:
                                   type: number
                                   nullable: true
-                                  description: Total price for the line (per-unit price x quantity) in cents
+                                  description: Line total = finalAmountCents x quantity, VAT-inclusive, after
+                                    discount. May be null/0 on some legacy
+                                    purchases — if you need a guaranteed line
+                                    total, compute finalAmountCents x quantity
+                                    yourself.
                                 vatRateBasisPoints:
                                   type: number
                                   nullable: true
-                                  description: VAT rate for this article in basis points (1200 = 12%, 2500 = 25%).
-                                    null if VAT is not yet resolved for the
-                                    line.
+                                  description: VAT rate in basis points (1200 = 12%, 2500 = 25%); divide by 100
+                                    for the percentage. Prices are
+                                    VAT-inclusive. null if VAT is not yet
+                                    resolved for the line.
                                 vatAmountCents:
                                   type: number
                                   nullable: true
-                                  description: VAT amount per unit in cents
+                                  description: VAT amount PER UNIT in cents (the VAT portion already contained in
+                                    finalAmountCents).
                                 totalVatAmountCents:
                                   type: number
                                   nullable: true
-                                  description: Total VAT for the line (per-unit VAT x quantity) in cents
+                                  description: VAT for the whole line = vatAmountCents x quantity, in cents.
                                 appliedTotalDiscountAmountCents:
                                   type: number
                                   nullable: true
-                                  description: Total discount applied to this line in cents
+                                  description: Discount allocated to this line, in cents, stored separately as a
+                                    positive number. It is ALREADY subtracted
+                                    from finalAmountCents/totalAmountCents.
+                                    Gross before discount = totalAmountCents +
+                                    appliedTotalDiscountAmountCents.
                                 articleNo:
                                   type: string
                                   nullable: true
-                                  description: Article number / SKU
+                                  description: Karma-internal line reference used for fiscal cash-register
+                                    registration — NOT the merchant external
+                                    SKU/PLU/article number, despite the name. To
+                                    match a line to your product catalogue, join
+                                    on originItemId, not this field.
                                 originItemId:
                                   type: number
                                   nullable: true
-                                  description: ID of the originating inventory item
+                                  description: ID of the catalogue item this line was sold from. Use this to join
+                                    a sale line back to your product/inventory
+                                    (and thus to your own external article
+                                    number).
                                 parentLineItemId:
                                   type: number
                                   nullable: true
-                                  description: Parent line item ID for child/modifier rows
+                                  description: "Set on child rows: variant/add-on items promoted to their own line
+                                    point at their parent here. To avoid
+                                    double-counting a bundle, reconcile line
+                                    totals against the purchase amount rather
+                                    than summing parent and children blindly."
                                 kitchenDispatchItemId:
                                   type: string
                                   nullable: true
@@ -133462,7 +133566,14 @@ paths:
                                   items:
                                     type: object
                                     additionalProperties: true
-                                  description: Modifications/extras applied to this line item
+                                  description: Modifications/adjustments applied inline to this line, e.g. [{
+                                    title, priceAdjustmentCents, variantRef? }].
+                                    Discounts and vouchers appear here as
+                                    negative priceAdjustmentCents. Product
+                                    variant add-ons that map to their own item
+                                    instead appear as separate child line items
+                                    (see parentLineItemId) — a modification here
+                                    does NOT carry an article number.
                                 channel:
                                   type: string
                                   nullable: true
@@ -136874,7 +136985,10 @@ paths:
                             description: Payment provider (e.g., stripe, adyen)
                           status:
                             type: string
-                            description: Payment status (pending, completed, failed, etc.)
+                            description: Payment status. 'confirmed' = paid/complete (the only status to
+                              treat as a finalized sale); 'pending' = in-flight;
+                              'canceled'/'failed' = not paid. Filter with the
+                              `status` query param.
                           createdAt:
                             type: string
                             format: date-time
@@ -136899,55 +137013,84 @@ paths:
                                   description: Line item ID
                                 type:
                                   type: string
-                                  description: Line item type ('product' or 'tip')
+                                  description: Line item type. 'product' = a sellable catalogue item; 'tip' = a
+                                    gratuity line (not a product); 'amount' = an
+                                    abstract amount paid toward a split/partial
+                                    tab (not a product). For a product-sales
+                                    export, keep only type='product'.
                                 title:
                                   type: string
                                   description: Item title
                                 quantity:
                                   type: number
-                                  description: Quantity ordered (supports fractional quantities, e.g. weight-based
-                                    items)
+                                  description: Whole-unit quantity ordered. For fractional/weight-based items use
+                                    quantityCents (quantity is the rounded/whole
+                                    count).
                                 quantityCents:
                                   type: number
                                   nullable: true
-                                  description: Quantity in cents (100 = 1x), used for fractional quantities
+                                  description: Quantity x100 (100 = 1 unit). Supports fractional/weight-based
+                                    items; divide by 100 for the true quantity.
                                 finalAmountCents:
                                   type: number
-                                  description: Final price per unit in cents, after discounts
+                                  description: Authoritative PER-UNIT price in cents, VAT-INCLUSIVE, AFTER
+                                    discount. Line total = finalAmountCents x
+                                    quantity (see totalAmountCents).
                                 totalAmountCents:
                                   type: number
                                   nullable: true
-                                  description: Total price for the line (per-unit price x quantity) in cents
+                                  description: Line total = finalAmountCents x quantity, VAT-inclusive, after
+                                    discount. May be null/0 on some legacy
+                                    purchases — if you need a guaranteed line
+                                    total, compute finalAmountCents x quantity
+                                    yourself.
                                 vatRateBasisPoints:
                                   type: number
                                   nullable: true
-                                  description: VAT rate for this article in basis points (1200 = 12%, 2500 = 25%).
-                                    null if VAT is not yet resolved for the
-                                    line.
+                                  description: VAT rate in basis points (1200 = 12%, 2500 = 25%); divide by 100
+                                    for the percentage. Prices are
+                                    VAT-inclusive. null if VAT is not yet
+                                    resolved for the line.
                                 vatAmountCents:
                                   type: number
                                   nullable: true
-                                  description: VAT amount per unit in cents
+                                  description: VAT amount PER UNIT in cents (the VAT portion already contained in
+                                    finalAmountCents).
                                 totalVatAmountCents:
                                   type: number
                                   nullable: true
-                                  description: Total VAT for the line (per-unit VAT x quantity) in cents
+                                  description: VAT for the whole line = vatAmountCents x quantity, in cents.
                                 appliedTotalDiscountAmountCents:
                                   type: number
                                   nullable: true
-                                  description: Total discount applied to this line in cents
+                                  description: Discount allocated to this line, in cents, stored separately as a
+                                    positive number. It is ALREADY subtracted
+                                    from finalAmountCents/totalAmountCents.
+                                    Gross before discount = totalAmountCents +
+                                    appliedTotalDiscountAmountCents.
                                 articleNo:
                                   type: string
                                   nullable: true
-                                  description: Article number / SKU
+                                  description: Karma-internal line reference used for fiscal cash-register
+                                    registration — NOT the merchant external
+                                    SKU/PLU/article number, despite the name. To
+                                    match a line to your product catalogue, join
+                                    on originItemId, not this field.
                                 originItemId:
                                   type: number
                                   nullable: true
-                                  description: ID of the originating inventory item
+                                  description: ID of the catalogue item this line was sold from. Use this to join
+                                    a sale line back to your product/inventory
+                                    (and thus to your own external article
+                                    number).
                                 parentLineItemId:
                                   type: number
                                   nullable: true
-                                  description: Parent line item ID for child/modifier rows
+                                  description: "Set on child rows: variant/add-on items promoted to their own line
+                                    point at their parent here. To avoid
+                                    double-counting a bundle, reconcile line
+                                    totals against the purchase amount rather
+                                    than summing parent and children blindly."
                                 kitchenDispatchItemId:
                                   type: string
                                   nullable: true
@@ -136958,7 +137101,14 @@ paths:
                                   items:
                                     type: object
                                     additionalProperties: true
-                                  description: Modifications/extras applied to this line item
+                                  description: Modifications/adjustments applied inline to this line, e.g. [{
+                                    title, priceAdjustmentCents, variantRef? }].
+                                    Discounts and vouchers appear here as
+                                    negative priceAdjustmentCents. Product
+                                    variant add-ons that map to their own item
+                                    instead appear as separate child line items
+                                    (see parentLineItemId) — a modification here
+                                    does NOT carry an article number.
                                 channel:
                                   type: string
                                   nullable: true
@@ -137907,6 +138057,146 @@ paths:
                       executionTimeMs:
                         type: integer
         "503":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: integer
+  /api/v1/reporting/fortnox-sie-exports:
+    get:
+      tags:
+        - reporting
+      description: Recent SIE file delivery attempts for a location. Successful files
+        are available in the Fortnox Inbox (Vouchers) and must be imported
+        manually in Fortnox.
+      parameters:
+        - schema:
+            type: integer
+          in: query
+          name: locationId
+          required: true
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          in: query
+          name: limit
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: cursor
+          required: false
+          description: Opaque cursor returned as nextCursor by the previous page
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    properties:
+                      exports:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            exportStartDate:
+                              type: string
+                            exportEndDate:
+                              type: string
+                            trigger:
+                              type: string
+                              enum:
+                                - manual
+                                - nightly
+                            status:
+                              type: string
+                              enum:
+                                - success
+                                - failed
+                            error:
+                              type:
+                                - "null"
+                                - string
+                            fortnoxFileId:
+                              type:
+                                - "null"
+                                - string
+                            fileName:
+                              type: string
+                            createdAt:
+                              type: string
+                      nextCursor:
+                        type:
+                          - "null"
+                          - string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: integer
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - error
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      timestamp:
+                        type: string
+                      executionTimeMs:
+                        type: integer
+        "500":
           description: Default Response
           content:
             application/json:
@@ -148159,6 +148449,7 @@ paths:
               - BOOKING
               - LOYALTY_REWARD
               - PRICING
+              - MARKETPLACE
           in: query
           name: entityType
           required: false
@@ -148231,6 +148522,7 @@ paths:
                                 - BOOKING
                                 - LOYALTY_REWARD
                                 - PRICING
+                                - MARKETPLACE
                               description: Type of entity being scheduled
                             entityId:
                               type: string
@@ -148720,6 +149012,7 @@ paths:
                     - BOOKING
                     - LOYALTY_REWARD
                     - PRICING
+                    - MARKETPLACE
                   description: Type of entity being scheduled
                 entityId:
                   type: string
@@ -148833,6 +149126,7 @@ paths:
                           - BOOKING
                           - LOYALTY_REWARD
                           - PRICING
+                          - MARKETPLACE
                         description: Type of entity being scheduled
                       entityId:
                         type: string
@@ -149315,6 +149609,7 @@ paths:
                           - BOOKING
                           - LOYALTY_REWARD
                           - PRICING
+                          - MARKETPLACE
                         description: Type of entity being scheduled
                       entityId:
                         type: string
@@ -149814,6 +150109,7 @@ paths:
                           - BOOKING
                           - LOYALTY_REWARD
                           - PRICING
+                          - MARKETPLACE
                         description: Type of entity being scheduled
                       entityId:
                         type: string
@@ -151186,6 +151482,7 @@ paths:
                           - BOOKING
                           - LOYALTY_REWARD
                           - PRICING
+                          - MARKETPLACE
                         description: Type of entity being scheduled
                       entityId:
                         type: string
@@ -151644,6 +151941,7 @@ paths:
               - BOOKING
               - LOYALTY_REWARD
               - PRICING
+              - MARKETPLACE
           in: query
           name: entityType
           required: true
@@ -151709,6 +152007,7 @@ paths:
                                 - BOOKING
                                 - LOYALTY_REWARD
                                 - PRICING
+                                - MARKETPLACE
                               description: Type of entity being scheduled
                             entityId:
                               type: string
