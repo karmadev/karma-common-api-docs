@@ -3206,6 +3206,13 @@ paths:
         - schema:
             type: string
           in: query
+          name: sections
+          required: false
+          description: Optional comma-separated dashboard sections. Omit for the complete
+            backward-compatible response.
+        - schema:
+            type: string
+          in: query
           name: tableGroupIds
           required: false
           description: Comma-separated list of table group IDs
@@ -6671,6 +6678,20 @@ paths:
           required: false
           description: Source of the booking
         - schema:
+            type: string
+          in: query
+          name: guestEmail
+          required: false
+          description: Filter by guest contact email (case-insensitive). Finds bookings
+            made without a user account, which have no userId to filter on.
+        - schema:
+            type: string
+          in: query
+          name: guestPhone
+          required: false
+          description: Filter by guest contact phone (exact match). Finds bookings made
+            without a user account, which have no userId to filter on.
+        - schema:
             type: number
             minimum: 1
             default: 1
@@ -7419,6 +7440,13 @@ paths:
                   description: If true, immediately seat the booking after creation. Requires a
                     table assignment. Will check for conflicting open tabs on
                     the table.
+                sendConfirmation:
+                  type: boolean
+                  default: false
+                  description: If true, send the guest a booking confirmation (email + SMS) right
+                    after creation, provided the new booking is already
+                    `confirmed`. Defaults to false. The response reports what
+                    was dispatched in `confirmationDelivery`.
               required:
                 - locationId
                 - bookingDate
@@ -7690,6 +7718,33 @@ paths:
                         type: number
                         description: Total cents of required items added to the linked tab. Zero when
                           the booking has no required items.
+                      confirmationDelivery:
+                        type: object
+                        nullable: true
+                        description: "What the guest confirmation dispatched, when `sendConfirmation:
+                          true` was requested. Null when it was not requested,
+                          when the new booking is not `confirmed`, or when
+                          nothing could be dispatched — in all three cases the
+                          caller should read the confirmation code out to the
+                          guest instead. `sent` means the notification was
+                          published to its Pub/Sub topic; delivery itself is
+                          fire-and-forget."
+                        properties:
+                          email:
+                            type: string
+                            enum:
+                              - sent
+                              - no_address
+                            description: "`no_address` when the booking resolved to no guest email."
+                          sms:
+                            type: string
+                            enum:
+                              - sent
+                              - no_number
+                            description: "`no_number` when the booking resolved to no guest phone."
+                        required:
+                          - email
+                          - sms
                       seated:
                         type: boolean
                         description: Only present when `seatImmediately` was passed in the request body.
