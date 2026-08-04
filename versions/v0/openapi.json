@@ -272252,7 +272252,7 @@
                                       "items": {
                                         "type": "string"
                                       },
-                                      "description": "POS-synced variants only: fields whose value is a Karma-side override of the POS base (currently only \"name\"). Absent for non-synced variants."
+                                      "description": "POS-synced variants only: fields whose value is a Karma-side override of the POS base (\"name\", \"default_selection\"). Absent for non-synced variants."
                                     }
                                   },
                                   "required": [
@@ -272267,12 +272267,61 @@
                                 },
                                 "description": "Variants in this group"
                               },
+                              "scheduleRules": {
+                                "type": "array",
+                                "nullable": true,
+                                "description": "Schedule rules for time-based availability",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Rule ID"
+                                    },
+                                    "dayOfWeek": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 6
+                                    },
+                                    "startTime": {
+                                      "type": "string",
+                                      "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+                                    },
+                                    "endTime": {
+                                      "type": "string",
+                                      "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+                                    },
+                                    "active": {
+                                      "type": "boolean"
+                                    }
+                                  }
+                                }
+                              },
+                              "channelAvailability": {
+                                "type": "object",
+                                "nullable": true,
+                                "description": "Channel availability flags; null means unrestricted",
+                                "properties": {
+                                  "online": {
+                                    "type": "boolean"
+                                  },
+                                  "qr": {
+                                    "type": "boolean"
+                                  },
+                                  "kiosk": {
+                                    "type": "boolean"
+                                  },
+                                  "pos": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
                               "posOverriddenFields": {
                                 "type": "array",
                                 "items": {
                                   "type": "string"
                                 },
-                                "description": "POS-synced groups only: fields whose value is a Karma-side override of the POS base (\"name\", \"is_visible\"). Absent for non-synced groups."
+                                "description": "POS-synced groups only: fields whose value is a Karma-side override of the POS base (\"name\", \"is_visible\", \"min\", \"max\"). Absent for non-synced groups."
                               }
                             },
                             "required": [
@@ -273063,7 +273112,7 @@
                                 "items": {
                                   "type": "string"
                                 },
-                                "description": "POS-synced variants only: fields whose value is a Karma-side override of the POS base (currently only \"name\"). Absent for non-synced variants."
+                                "description": "POS-synced variants only: fields whose value is a Karma-side override of the POS base (\"name\", \"default_selection\"). Absent for non-synced variants."
                               }
                             },
                             "required": [
@@ -273078,12 +273127,61 @@
                           },
                           "description": "Variants in this group"
                         },
+                        "scheduleRules": {
+                          "type": "array",
+                          "nullable": true,
+                          "description": "Schedule rules for time-based availability",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Rule ID"
+                              },
+                              "dayOfWeek": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "startTime": {
+                                "type": "string",
+                                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+                              },
+                              "endTime": {
+                                "type": "string",
+                                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+                              },
+                              "active": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        },
+                        "channelAvailability": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "Channel availability flags; null means unrestricted",
+                          "properties": {
+                            "online": {
+                              "type": "boolean"
+                            },
+                            "qr": {
+                              "type": "boolean"
+                            },
+                            "kiosk": {
+                              "type": "boolean"
+                            },
+                            "pos": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
                         "posOverriddenFields": {
                           "type": "array",
                           "items": {
                             "type": "string"
                           },
-                          "description": "POS-synced groups only: fields whose value is a Karma-side override of the POS base (\"name\", \"is_visible\"). Absent for non-synced groups."
+                          "description": "POS-synced groups only: fields whose value is a Karma-side override of the POS base (\"name\", \"is_visible\", \"min\", \"max\"). Absent for non-synced groups."
                         }
                       },
                       "required": [
@@ -273731,7 +273829,7 @@
                                 "items": {
                                   "type": "string"
                                 },
-                                "description": "POS-synced variants only: fields whose value is a Karma-side override of the POS base (currently only \"name\"). Absent for non-synced variants."
+                                "description": "POS-synced variants only: fields whose value is a Karma-side override of the POS base (\"name\", \"default_selection\"). Absent for non-synced variants."
                               }
                             },
                             "required": [
@@ -273746,12 +273844,61 @@
                           },
                           "description": "Variants in this group"
                         },
+                        "scheduleRules": {
+                          "type": "array",
+                          "nullable": true,
+                          "description": "Schedule rules for time-based availability",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Rule ID"
+                              },
+                              "dayOfWeek": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "startTime": {
+                                "type": "string",
+                                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+                              },
+                              "endTime": {
+                                "type": "string",
+                                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+                              },
+                              "active": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        },
+                        "channelAvailability": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "Channel availability flags; null means unrestricted",
+                          "properties": {
+                            "online": {
+                              "type": "boolean"
+                            },
+                            "qr": {
+                              "type": "boolean"
+                            },
+                            "kiosk": {
+                              "type": "boolean"
+                            },
+                            "pos": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
                         "posOverriddenFields": {
                           "type": "array",
                           "items": {
                             "type": "string"
                           },
-                          "description": "POS-synced groups only: fields whose value is a Karma-side override of the POS base (\"name\", \"is_visible\"). Absent for non-synced groups."
+                          "description": "POS-synced groups only: fields whose value is a Karma-side override of the POS base (\"name\", \"is_visible\", \"min\", \"max\"). Absent for non-synced groups."
                         }
                       },
                       "required": [
@@ -274432,7 +274579,7 @@
                                 "items": {
                                   "type": "string"
                                 },
-                                "description": "POS-synced variants only: fields whose value is a Karma-side override of the POS base (currently only \"name\"). Absent for non-synced variants."
+                                "description": "POS-synced variants only: fields whose value is a Karma-side override of the POS base (\"name\", \"default_selection\"). Absent for non-synced variants."
                               }
                             },
                             "required": [
@@ -274447,12 +274594,61 @@
                           },
                           "description": "Variants in this group"
                         },
+                        "scheduleRules": {
+                          "type": "array",
+                          "nullable": true,
+                          "description": "Schedule rules for time-based availability",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Rule ID"
+                              },
+                              "dayOfWeek": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "startTime": {
+                                "type": "string",
+                                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+                              },
+                              "endTime": {
+                                "type": "string",
+                                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+                              },
+                              "active": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        },
+                        "channelAvailability": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "Channel availability flags; null means unrestricted",
+                          "properties": {
+                            "online": {
+                              "type": "boolean"
+                            },
+                            "qr": {
+                              "type": "boolean"
+                            },
+                            "kiosk": {
+                              "type": "boolean"
+                            },
+                            "pos": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
                         "posOverriddenFields": {
                           "type": "array",
                           "items": {
                             "type": "string"
                           },
-                          "description": "POS-synced groups only: fields whose value is a Karma-side override of the POS base (\"name\", \"is_visible\"). Absent for non-synced groups."
+                          "description": "POS-synced groups only: fields whose value is a Karma-side override of the POS base (\"name\", \"is_visible\", \"min\", \"max\"). Absent for non-synced groups."
                         }
                       },
                       "required": [
