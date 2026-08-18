@@ -132907,6 +132907,13 @@ paths:
           required: false
           description: Filter by customer email (partial match)
         - schema:
+            type: string
+            pattern: ^[0-9]{4}$
+          in: query
+          name: cardLast4
+          required: false
+          description: Filter by last 4 digits of the paying card (exact match)
+        - schema:
             type: number
           in: query
           name: itemId
