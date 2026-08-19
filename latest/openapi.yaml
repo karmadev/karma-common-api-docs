@@ -137640,6 +137640,13 @@ paths:
           name: format
           required: true
           description: Export file format
+        - schema:
+            type: boolean
+          in: query
+          name: splitByCostCenter
+          required: false
+          description: Overrides the saved location_export_settings split_by_cost_center
+            flag for this request. Omit to use the saved setting.
       responses:
         "400":
           description: Default Response
