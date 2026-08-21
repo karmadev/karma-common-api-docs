@@ -38284,10 +38284,12 @@ paths:
                   description: Number of surplus items to sell.
                 discountPercentage:
                   type: integer
-                  minimum: 50
+                  minimum: 1
                   maximum: 90
-                  description: Discount percentage off base price (50–90). Mutually exclusive with
-                    `overridePriceCents`.
+                  description: Discount percentage off base price. The lower bound is the
+                    effective surplus floor for this location (default 50; lower
+                    for partners configured with one), upper bound 90. Mutually
+                    exclusive with `overridePriceCents`.
                 overridePriceCents:
                   type: integer
                   minimum: 0
@@ -38489,7 +38491,7 @@ paths:
                         minimum: 1
                       discountPercentage:
                         type: integer
-                        minimum: 50
+                        minimum: 1
                         maximum: 90
                       overridePriceCents:
                         type: integer
@@ -156601,7 +156603,7 @@ paths:
                   type: string
                 discountPercentage:
                   type: integer
-                  minimum: 50
+                  minimum: 1
                   maximum: 90
                 overridePriceCents:
                   type: integer
@@ -156722,7 +156724,7 @@ paths:
                   type:
                     - integer
                     - "null"
-                  minimum: 50
+                  minimum: 1
                   maximum: 90
                 overridePriceCents:
                   type:
@@ -156951,7 +156953,7 @@ paths:
                         type: string
                       discountPercentage:
                         type: integer
-                        minimum: 50
+                        minimum: 1
                         maximum: 90
                       overridePriceCents:
                         type: integer
@@ -157178,7 +157180,7 @@ paths:
                         type:
                           - integer
                           - "null"
-                        minimum: 50
+                        minimum: 1
                         maximum: 90
                       overridePriceCents:
                         type:
@@ -157318,7 +157320,7 @@ paths:
                   type:
                     - integer
                     - "null"
-                  minimum: 50
+                  minimum: 1
                   maximum: 90
                 overridePriceCents:
                   type:
